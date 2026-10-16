@@ -56,3 +56,8 @@ Because the data are synthetic, the reported metrics are **method checks rather 
 My existing portfolio already contains regression, classification, pandas and scikit-learn work. This compact extension makes additional research-assistant competencies directly inspectable: clustering, chronological validation, time-series modelling, probabilistic count modelling, testing and CI.
 
 For a cross-project evidence map, see [`../../SKILLS_EVIDENCE.md`](../../SKILLS_EVIDENCE.md).
+
+## Responsible-use documentation
+
+- [`MODEL_CARD.md`](MODEL_CARD.md) documents purpose, evaluation, generalisability limits and safe interpretation.
+- [`DATA_GOVERNANCE.md`](DATA_GOVERNANCE.md) documents privacy-aware portfolio practice and governance considerations for real epidemiological data.
