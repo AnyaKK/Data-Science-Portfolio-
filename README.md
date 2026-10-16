@@ -1,8 +1,12 @@
 # Data Science Portfolio
 
-This repository presents R and Python exercises, assessments and capstone projects carried out to demonstrate practical experience in data analysis, statistics, machine learning, spatial analysis and reproducible workflows. It also includes selected SQL, Excel, Power BI and Bash work. Each project folder explains its question, evidence, methods, data and reproducibility limits.
+## About
+
+This public portfolio brings together 11 documented project folders, 66 R/Python learning notebooks and a standalone R visualisation script completed or adapted during data-science study. It demonstrates data collection, wrangling, visualisation, statistical analysis, machine learning, spatial analysis and reproducible workflows, with selected SQL, Excel, Power BI and Bash work. Each project folder explains its question, evidence, methods, data and reproducibility limits.
 
 Many notebooks began as IBM Skills Network or Coursera labs and peer-graded assignments. Their original attribution and course material remain in the notebooks. The summaries below describe the work that is present in this repository; they do not claim results beyond the saved files.
+
+The public repository is a curated, privacy-aware selection from a larger local study archive. Raw private data, account details, institution-facing records, third-party course packs and duplicate checkpoints remain outside version control.
 
 ## Projects
 
@@ -31,6 +35,7 @@ Many notebooks began as IBM Skills Network or Coursera labs and peer-graded assi
 | [Statistics with Python](exercises/python-statistics/) | Descriptive statistics, probability, hypothesis tests, regression and visualisation |
 | [Python data engineering](exercises/python-data-engineering/) | API extraction, web scraping and ETL practice |
 | [R foundations and analysis](exercises/r-foundations-and-analysis/) | R data structures, web data, charting, tidyverse analysis and modelling |
+| [R data import and visualisation](exercises/r-basic-visualisation/) | Tab-delimited data import, exploratory plots, grouped comparisons and an optional violin plot |
 | [OpenWeather API in R](exercises/weather-api-r/) | A coursework draft for collecting five-day forecasts with `httr` |
 | [Bash backup script](exercises/bash-backup/) | A coursework draft for creating a timestamped archive from recently modified files |
 
@@ -63,6 +68,7 @@ Many notebooks began as IBM Skills Network or Coursera labs and peer-graded assi
     ├── python-statistics/
     ├── python-data-engineering/
     ├── r-foundations-and-analysis/
+    ├── r-basic-visualisation/
     ├── weather-api-r/
     └── bash-backup/
 ```
@@ -71,9 +77,9 @@ Many notebooks began as IBM Skills Network or Coursera labs and peer-graded assi
 
 For a concise cross-project map of inspectable competencies — including Git/GitHub workflow use, pandas, scikit-learn, regression, classification, clustering, time-series modelling, probabilistic count modelling, visualisation, SQL and reproducibility — see [`SKILLS_EVIDENCE.md`](SKILLS_EVIDENCE.md).
 
-For the local source review, inclusion decisions and privacy/size exclusions used to prepare this branch, see [`docs/LOCAL_SOURCE_AUDIT.md`](docs/LOCAL_SOURCE_AUDIT.md).
+For the local source review, inclusion decisions and privacy/size exclusions recorded during the October 2026 portfolio update, see [`docs/LOCAL_SOURCE_AUDIT.md`](docs/LOCAL_SOURCE_AUDIT.md).
 
-The repository uses branch-based pull requests for larger maintenance changes. Recent examples include [PR #2](../../pull/2), which reorganised the portfolio, documented projects and removed hard-coded credentials from current files.
+The repository uses short-lived branches and pull requests for maintenance so that portfolio changes can be reviewed before they reach `main`.
 
 ## Using the repository
 

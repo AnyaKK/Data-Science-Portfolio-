@@ -28,5 +28,5 @@ Open the file in Power BI Desktop to inspect the interactive report, data model,
 - Use Power BI Desktop for the `.pbix` report.
 - Open the PDF in any standard PDF viewer.
 
-These files preserve the original course artifacts and embedded attribution.
+These files preserve the original course content and embedded attribution. Personal document metadata and local machine paths were removed from the published workbook without changing its visible worksheets.
 

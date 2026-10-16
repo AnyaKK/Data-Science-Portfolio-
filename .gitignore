@@ -4,11 +4,28 @@
 !.env.example
 .venv/
 .pip-tmp/
+.pytest_cache/
+.idea/
+.vscode/
 __pycache__/
 *.py[cod]
+*.log
 .ipynb_checkpoints/
 .Rhistory
 .RData
+*.RDataTmp
+.Rproj.user/
+*.Rproj
+Rplots.pdf
+.quarto/
+_freeze/
+_site/
+site_libs/
+
+# Operating-system metadata
+.DS_Store
+Thumbs.db
+Desktop.ini
 
 # Local source archive, private records and non-portfolio material
 /local-only/
@@ -42,6 +59,5 @@ dataset_part_3.csv
 spacex_web_scraped.csv
 
 # Office temporary files
-~$*.xlsx
-~$*.pbix
+~$*
 

@@ -33,7 +33,7 @@ set.seed(7002)
 required_pkgs <- c(
   "tidyverse", "janitor", "readxl", "here",
   "sf", "tmap",
-  "spdep",
+  "spdep", "spatialreg", "GWmodel", "spgwr",
   "broom", "lmtest", "sandwich", "car",
   "gt"
 )
