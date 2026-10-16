@@ -79,6 +79,8 @@ For a concise cross-project map of inspectable competencies — including Git/Gi
 
 For the local source review, inclusion decisions and privacy/size exclusions recorded during the October 2026 portfolio update, see [`docs/LOCAL_SOURCE_AUDIT.md`](docs/LOCAL_SOURCE_AUDIT.md).
 
+For a recruiter-oriented crosswalk from common research-assistant criteria to specific public evidence, see [`docs/RESEARCH_ROLE_EVIDENCE.md`](docs/RESEARCH_ROLE_EVIDENCE.md).
+
 The repository uses short-lived branches and pull requests for maintenance so that portfolio changes can be reviewed before they reach `main`.
 
 ## Using the repository
