@@ -1,6 +1,6 @@
 # Data Science Portfolio
 
-This repository collects data analysis, statistics, machine-learning and business-intelligence coursework. The projects use Python, R, SQL, Excel, Power BI and Bash. Each project folder has a short guide to its question, data, methods, saved outputs and reproducibility notes.
+This repository presents R and Python exercises, assessments and capstone projects carried out to demonstrate practical experience in data analysis, statistics, machine learning, spatial analysis and reproducible workflows. It also includes selected SQL, Excel, Power BI and Bash work. Each project folder explains its question, evidence, methods, data and reproducibility limits.
 
 Many notebooks began as IBM Skills Network or Coursera labs and peer-graded assignments. Their original attribution and course material remain in the notebooks. The summaries below describe the work that is present in this repository; they do not claim results beyond the saved files.
 
@@ -15,11 +15,22 @@ Many notebooks began as IBM Skills Network or Coursera labs and peer-graded assi
 | [Stock and revenue visualisation](projects/stock-revenue-analysis/) | Tesla and GameStop market-data extraction, revenue scraping and Plotly charts | Python, yfinance, Beautiful Soup, Plotly |
 | [Business-intelligence exercises](projects/business-intelligence/) | Excel pivot analysis, Power BI report design and static dashboard outputs | Excel, Power BI |
 | [Epidemiology ML methods demonstration](projects/epidemiology-ml-methods/) | Synthetic epidemiology-style workflow for clustering, chronological validation, time-series forecasting, probabilistic count modelling, tests and CI | Python, pandas, scikit-learn, statsmodels, pytest |
+| [Heart-disease GA/PSO feature selection](projects/heart-disease-feature-selection/) | Reproducible comparison of all features, genetic-algorithm selection and particle-swarm selection across five classifiers | Python, scikit-learn, XGBoost, PyGAD, PySwarms |
+| [Starbucks offer-response analysis](projects/starbucks-offer-analysis/) | Event reconstruction, feature engineering, exploratory analysis and a logistic-regression pipeline on simulated rewards data | Python, pandas, scikit-learn |
+| [Loan-repayment classification assessment](projects/loan-classification-assessment/) | KNN, decision-tree, SVM and logistic-regression comparison with classification metrics | Python, pandas, scikit-learn |
+| [Spatial digital-infrastructure analysis](projects/spatial-infrastructure-r/) | Audited local-authority joins, spatial mapping, OLS diagnostics and decision-support outputs | R, Quarto, sf, tidyverse |
 
-## Smaller exercises
+## Learning exercises
 
-| Exercise | Focus |
+| Collection | Focus |
 | --- | --- |
+| [Python foundations](exercises/python-foundations/) | 17 notebooks covering core syntax, data structures, control flow, functions, classes, files, NumPy and APIs |
+| [Python data analysis](exercises/python-data-analysis/) | Data wrangling, exploratory analysis, model development and evaluation |
+| [Python visualisation](exercises/python-visualisation/) | Matplotlib, statistical charts, word clouds, maps and Plotly |
+| [Python machine learning](exercises/python-machine-learning/) | Regression, classification, clustering and recommendation systems |
+| [Statistics with Python](exercises/python-statistics/) | Descriptive statistics, probability, hypothesis tests, regression and visualisation |
+| [Python data engineering](exercises/python-data-engineering/) | API extraction, web scraping and ETL practice |
+| [R foundations and analysis](exercises/r-foundations-and-analysis/) | R data structures, web data, charting, tidyverse analysis and modelling |
 | [OpenWeather API in R](exercises/weather-api-r/) | A coursework draft for collecting five-day forecasts with `httr` |
 | [Bash backup script](exercises/bash-backup/) | A coursework draft for creating a timestamped archive from recently modified files |
 
@@ -39,8 +50,19 @@ Many notebooks began as IBM Skills Network or Coursera labs and peer-graded assi
 │   ├── covid19-r-analysis/
 │   ├── stock-revenue-analysis/
 │   ├── business-intelligence/
-│   └── epidemiology-ml-methods/
+│   ├── epidemiology-ml-methods/
+│   ├── heart-disease-feature-selection/
+│   ├── starbucks-offer-analysis/
+│   ├── loan-classification-assessment/
+│   └── spatial-infrastructure-r/
 └── exercises/
+    ├── python-foundations/
+    ├── python-data-analysis/
+    ├── python-visualisation/
+    ├── python-machine-learning/
+    ├── python-statistics/
+    ├── python-data-engineering/
+    ├── r-foundations-and-analysis/
     ├── weather-api-r/
     └── bash-backup/
 ```
@@ -48,6 +70,8 @@ Many notebooks began as IBM Skills Network or Coursera labs and peer-graded assi
 ## Research-role evidence
 
 For a concise cross-project map of inspectable competencies — including Git/GitHub workflow use, pandas, scikit-learn, regression, classification, clustering, time-series modelling, probabilistic count modelling, visualisation, SQL and reproducibility — see [`SKILLS_EVIDENCE.md`](SKILLS_EVIDENCE.md).
+
+For the local source review, inclusion decisions and privacy/size exclusions used to prepare this branch, see [`docs/LOCAL_SOURCE_AUDIT.md`](docs/LOCAL_SOURCE_AUDIT.md).
 
 The repository uses branch-based pull requests for larger maintenance changes. Recent examples include [PR #2](../../pull/2), which reorganised the portfolio, documented projects and removed hard-coded credentials from current files.
 
@@ -57,7 +81,8 @@ The repository uses branch-based pull requests for larger maintenance changes. R
 2. Run notebooks in Jupyter with the language and packages listed in that project guide.
 3. Expect network access to be required: several notebooks download IBM-hosted snapshots or query public websites and APIs.
 4. Treat saved notebook outputs as a record of the original run. Live sources and package versions can change, so a new run may differ.
+5. Learning notebooks retain their course attribution. They are evidence of completed or adapted practice, not a claim of authorship over supplied prompts or datasets.
 
 ## Credentials
 
-No credential is required to browse the saved work. The weather exercise reads `OPENWEATHER_API_KEY`, and the Db2 notebook reads `DB2_CONNECTION`, from environment variables when those cells are run. Keep keys and connection strings out of notebooks and version control.
+No credential is required to browse the saved work. Exercises that call OpenWeather, Exchange Rates, IBM Speech to Text, IBM Language Translator or Db2 read their settings from environment variables when those cells are run; the required variable names are listed in [`.env.example`](.env.example). Keep keys, service URLs and connection strings out of notebooks and version control.
