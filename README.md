@@ -14,6 +14,7 @@ Many notebooks began as IBM Skills Network or Coursera labs and peer-graded assi
 | [Global COVID-19 analysis in R](projects/covid19-r-analysis/) | HTML-table extraction, data cleaning, ratios, filtering and country comparisons | R, httr, rvest |
 | [Stock and revenue visualisation](projects/stock-revenue-analysis/) | Tesla and GameStop market-data extraction, revenue scraping and Plotly charts | Python, yfinance, Beautiful Soup, Plotly |
 | [Business-intelligence exercises](projects/business-intelligence/) | Excel pivot analysis, Power BI report design and static dashboard outputs | Excel, Power BI |
+| [Epidemiology ML methods demonstration](projects/epidemiology-ml-methods/) | Synthetic epidemiology-style workflow for clustering, chronological validation, time-series forecasting, probabilistic count modelling, tests and CI | Python, pandas, scikit-learn, statsmodels, pytest |
 
 ## Smaller exercises
 
@@ -27,17 +28,28 @@ Many notebooks began as IBM Skills Network or Coursera labs and peer-graded assi
 ```text
 .
 ├── README.md
+├── SKILLS_EVIDENCE.md
+├── .github/
+│   └── workflows/
+│       └── portfolio-ci.yml
 ├── projects/
 │   ├── spacex-falcon9-landing/
 │   ├── king-county-house-prices/
 │   ├── boston-housing-statistics/
 │   ├── covid19-r-analysis/
 │   ├── stock-revenue-analysis/
-│   └── business-intelligence/
+│   ├── business-intelligence/
+│   └── epidemiology-ml-methods/
 └── exercises/
     ├── weather-api-r/
     └── bash-backup/
 ```
+
+## Research-role evidence
+
+For a concise cross-project map of inspectable competencies — including Git/GitHub workflow use, pandas, scikit-learn, regression, classification, clustering, time-series modelling, probabilistic count modelling, visualisation, SQL and reproducibility — see [`SKILLS_EVIDENCE.md`](SKILLS_EVIDENCE.md).
+
+The repository uses branch-based pull requests for larger maintenance changes. Recent examples include [PR #2](../../pull/2), which reorganised the portfolio, documented projects and removed hard-coded credentials from current files.
 
 ## Using the repository
 
@@ -49,4 +61,3 @@ Many notebooks began as IBM Skills Network or Coursera labs and peer-graded assi
 ## Credentials
 
 No credential is required to browse the saved work. The weather exercise reads `OPENWEATHER_API_KEY`, and the Db2 notebook reads `DB2_CONNECTION`, from environment variables when those cells are run. Keep keys and connection strings out of notebooks and version control.
-
