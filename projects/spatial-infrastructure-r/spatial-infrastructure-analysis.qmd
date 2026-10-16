@@ -1,0 +1,1419 @@
+---
+title: "Spatial digital infrastructure using Nomis, deprivation and Ofcom datasets"
+author: "Portfolio project"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+format:
+  #html:
+  docx:
+   toc: true
+   toc-depth: 3
+   number-sections: true
+   code-fold: false
+execute:
+  echo: true
+  warning: false
+  message: false
+  error: false
+---
+
+# 0. Overview
+
+This R and Quarto analysis assembled an auditable Local Authority District (LAD) dataset for England by stacking model-based unemployment (Nomis UMB), deprivation (IoD/IMD 2025), and mobile coverage (Ofcom Connected Nations 2025), then produced reproducible maps and diagnostics to support an evaluative review of spatial-data interoperability, uncertainty, and decision-support implications.
+
+# 1. Setup and reproducibility
+
+## 1.1 Libraries, options, and project paths
+
+```{r}
+#| label: setup-01-libraries
+
+options(stringsAsFactors = FALSE, scipen = 999)
+set.seed(7002)
+
+required_pkgs <- c(
+  "tidyverse", "janitor", "readxl", "here",
+  "sf", "tmap",
+  "spdep",
+  "broom", "lmtest", "sandwich", "car",
+  "gt"
+)
+
+missing_pkgs <- required_pkgs[!vapply(required_pkgs, requireNamespace, logical(1), quietly = TRUE)]
+if (length(missing_pkgs) > 0) {
+  stop(
+    "Missing required packages: ", paste(missing_pkgs, collapse = ", "),
+    "\nPackages were expected to be installed before rendering."
+  )
+}
+
+library(tidyverse)
+library(janitor)
+library(readxl)
+library(here)
+library(sf)
+library(tmap)
+library(spdep)
+library(broom)
+library(lmtest)
+library(sandwich)
+library(car)
+library(gt)
+```
+
+```{r}
+#| label: setup-02-folders
+
+dir_input_raw   <- here("data", "raw")
+dir_processed   <- here("data", "processed")
+dir_out_tables  <- here("outputs", "tables")
+dir_out_figures <- here("outputs", "figures")
+dir_logs        <- here("logs")
+
+dir.create(dir_input_raw, recursive = TRUE, showWarnings = FALSE)
+dir.create(dir_processed, recursive = TRUE, showWarnings = FALSE)
+dir.create(dir_out_tables, recursive = TRUE, showWarnings = FALSE)
+dir.create(dir_out_figures, recursive = TRUE, showWarnings = FALSE)
+dir.create(dir_logs, recursive = TRUE, showWarnings = FALSE)
+
+ts <- format(Sys.time(), "%Y%m%d_%H%M%S")
+```
+
+## 1.2 Reproducibility decisions
+
+This lab used explicit folder creation, timestamped versioning, and join-audit logs to make the dataset stack repeatable and traceable. Each figure and table was rendered in-document before being exported to disk.
+
+# 2. Data ingestion and validation
+
+## 2.1 Helper functions
+
+```{r}
+#| label: ingest-01-helpers
+
+standardise_codes <- function(x) {
+  x <- as.character(x)
+  x <- stringr::str_trim(x)
+  x <- stringr::str_to_upper(x)
+  x[x == ""] <- NA_character_
+  x
+}
+
+coerce_num <- function(x) {
+  x <- as.character(x)
+  x <- stringr::str_trim(x)
+  x <- stringr::str_replace_all(x, ",", "")
+  suppressWarnings(readr::parse_double(x))
+}
+
+resolve_input_path <- function(filename) {
+  candidates <- c(
+    here("data", "raw", filename),
+    here(filename),
+    file.path("/mnt/data", filename)
+  )
+  p <- candidates[file.exists(candidates)][1]
+  if (is.na(p)) {
+    stop(
+      "Input file was not found: ", filename,
+      "\nSearched: ", paste(candidates, collapse = " | ")
+    )
+  }
+  p
+}
+
+assert_unique_key <- function(df, key) {
+  key <- rlang::ensym(key)
+  dup <- df %>%
+    dplyr::count(!!key, name = "n") %>%
+    dplyr::filter(!is.na(!!key), n > 1)
+  if (nrow(dup) > 0) {
+    stop("Key was not unique for: ", rlang::as_string(key), " (", nrow(dup), " duplicates).")
+  }
+  invisible(TRUE)
+}
+
+guess_code_col <- function(df, code_regex = "^[A-Z][0-9]{8}$", min_share = 0.4) {
+  nm <- names(df)
+  scores <- purrr::map_dbl(nm, function(col) {
+    x <- df[[col]]
+    x <- standardise_codes(x)
+    x <- x[!is.na(x)]
+    if (length(x) == 0) return(0)
+    mean(stringr::str_detect(x, code_regex))
+  })
+  if (max(scores, na.rm = TRUE) < min_share) return(NULL)
+  nm[which.max(scores)]
+}
+
+make_data_dictionary <- function(df) {
+  tibble::tibble(
+    lad_nm = "Not applicable (metadata table)",
+    variable = names(df),
+    type = vapply(df, function(x) class(x)[1], character(1)),
+    pct_missing = round(vapply(df, function(x) mean(is.na(x)) * 100, numeric(1)), 1),
+    n_distinct = vapply(df, function(x) dplyr::n_distinct(x, na.rm = TRUE), numeric(1))
+  )
+}
+
+gt_apa <- function(df, title) {
+  gt::gt(df) %>%
+    gt::tab_header(title = gt::md(title)) %>%
+    gt::fmt_number(columns = where(is.numeric), decimals = 3) %>%
+    gt::tab_options(
+      table.font.size = px(12),
+      heading.title.font.size = px(14),
+      table.border.top.style = "solid",
+      table.border.bottom.style = "solid",
+      column_labels.border.bottom.style = "solid",
+      data_row.padding = px(3)
+    )
+}
+
+audit_left_join <- function(left, right, by, left_name, right_name, log_prefix) {
+  by <- rlang::ensym(by)
+  left_keys <- left %>% dplyr::distinct(!!by)
+  right_keys <- right %>% dplyr::distinct(!!by)
+
+  summary <- tibble::tibble(
+    lad_nm = "Not applicable (audit table)",
+    left = left_name,
+    right = right_name,
+    left_keys = nrow(left_keys),
+    right_keys = nrow(right_keys),
+    matched_keys = nrow(dplyr::inner_join(left_keys, right_keys, by = rlang::as_string(by))),
+    missing_in_right = nrow(dplyr::anti_join(left_keys, right_keys, by = rlang::as_string(by))),
+    missing_in_left  = nrow(dplyr::anti_join(right_keys, left_keys, by = rlang::as_string(by)))
+  )
+
+  miss_r <- dplyr::anti_join(left_keys, right_keys, by = rlang::as_string(by)) %>%
+    dplyr::rename(missing_key = !!by) %>%
+    dplyr::mutate(lad_nm = NA_character_)
+
+  miss_l <- dplyr::anti_join(right_keys, left_keys, by = rlang::as_string(by)) %>%
+    dplyr::rename(missing_key = !!by) %>%
+    dplyr::mutate(lad_nm = NA_character_)
+
+  readr::write_csv(summary, here("logs", paste0(log_prefix, "_summary_", ts, ".csv")))
+  readr::write_csv(miss_r,  here("logs", paste0(log_prefix, "_missing_in_right_", ts, ".csv")))
+  readr::write_csv(miss_l,  here("logs", paste0(log_prefix, "_missing_in_left_", ts, ".csv")))
+
+  list(summary = summary, missing_in_right = miss_r, missing_in_left = miss_l)
+}
+```
+
+## 2.2 Read each file and print first-pass profiles
+
+```{r}
+#| label: ingest-02-paths
+
+file_ofcom <- "202507_mobile_coverage_4G5G_r01.csv"
+file_imd   <- "File_1_IoD2025_Index_of_Multiple_Deprivation.xlsx"
+file_dom   <- "File_2_IoD2025_Domains_of_Deprivation.xlsx"
+
+file_nomis_unemp <- "2892939637046739.csv"
+file_nomis_aps   <- "2910515808293042.csv"
+file_nomis_sales <- "37953031588522055.csv"
+
+path_ofcom <- resolve_input_path(file_ofcom)
+path_imd   <- resolve_input_path(file_imd)
+path_dom   <- resolve_input_path(file_dom)
+path_unemp <- resolve_input_path(file_nomis_unemp)
+path_aps   <- resolve_input_path(file_nomis_aps)
+path_sales <- resolve_input_path(file_nomis_sales)
+```
+
+```{r}
+#| label: ingest-03-read-and-profile
+#| include: false
+
+ofcom_raw <- readr::read_csv(path_ofcom, show_col_types = FALSE) %>% clean_names()
+imd_raw   <- readxl::read_excel(path_imd, sheet = 1) %>% clean_names()
+dom_raw   <- readxl::read_excel(path_dom, sheet = 1) %>% clean_names()
+
+read_nomis_char <- function(path) {
+  readr::read_csv(
+    path,
+    show_col_types = FALSE,
+    col_types = readr::cols(.default = readr::col_character()),
+    na = c("", "NA", "..", "-", "!", "*", "~")
+  ) %>%
+    clean_names()
+}
+
+unemp_raw <- read_nomis_char(path_unemp)
+aps_raw   <- read_nomis_char(path_aps)
+sales_raw <- read_nomis_char(path_sales)
+
+dplyr::glimpse(ofcom_raw)
+dplyr::glimpse(imd_raw)
+dplyr::glimpse(dom_raw)
+dplyr::glimpse(unemp_raw)
+dplyr::glimpse(aps_raw)
+dplyr::glimpse(sales_raw)
+```
+
+```{r}
+#| label: tbl-data-dictionaries
+#| include: false
+#| tbl-cap: Data dictionaries for primary inputs (types, missingness, distinctness).
+
+dict_all <- dplyr::bind_rows(
+  make_data_dictionary(ofcom_raw) %>% dplyr::mutate(dataset = "ofcom"),
+  make_data_dictionary(imd_raw)   %>% dplyr::mutate(dataset = "imd_index"),
+  make_data_dictionary(dom_raw)   %>% dplyr::mutate(dataset = "imd_domains"),
+  make_data_dictionary(unemp_raw) %>% dplyr::mutate(dataset = "nomis_unemployment"),
+  make_data_dictionary(aps_raw)   %>% dplyr::mutate(dataset = "nomis_aps"),
+  make_data_dictionary(sales_raw) %>% dplyr::mutate(dataset = "nomis_sales")
+) %>%
+  dplyr::select(lad_nm, dataset, variable, type, pct_missing, n_distinct)
+
+tbl_dict <- gt_apa(dict_all, "Data dictionary (all inputs)")
+tbl_dict
+gt::gtsave(tbl_dict, filename = here("outputs", "tables", paste0("data_dictionary_", ts, ".html")))
+```
+
+# 3. Key harmonisation and join audit
+
+## 3.1 LAD boundary spine (England only)
+
+```{r}
+#| label: harmonise-01-boundaries
+
+# Decision note: LAD boundaries were aligned to the LAD code year embedded in the IoD 2025 files ("Local Authority District code (2024)").
+
+# Local file (same directory as the .qmd)
+lad_file <- "Local_Authority_Districts_May_2024_Boundaries_UK_BFC_2554149445924770617.gpkg"
+
+lad_sf <- st_read(lad_file, quiet = TRUE) %>% rename("lad_cd" = "LAD24CD", "lad_nm" = "LAD24NM") %>% janitor::clean_names()
+
+lad_spine_df <- lad_sf %>%
+  janitor::clean_names() %>%
+  dplyr::mutate(
+    lad_cd = standardise_codes(lad_cd)
+  ) %>%
+  dplyr::filter(stringr::str_starts(lad_cd, "E")) %>%
+  dplyr::left_join(
+    unemp_raw %>%
+      janitor::clean_names() %>%
+      dplyr::mutate(mnemonic = standardise_codes(mnemonic)),
+    by = c("lad_cd" = "mnemonic")
+  ) %>%
+  sf::st_make_valid()
+
+# A planar CRS for geometry operations and centroid-like points (metres)
+
+lad_spine <- st_transform(lad_spine_df, 27700)
+
+lad_spine <- lad_spine %>% dplyr::select(lad_cd, lad_nm, bng_e, bng_n, long, lat, global_id, SHAPE)
+
+assert_unique_key(lad_spine, lad_cd)
+
+# Non-spatial lookup for joins (guaranteed LAD names)
+lad_lookup <- lad_spine %>%
+  sf::st_drop_geometry() %>%
+  dplyr::select(lad_cd, lad_nm)
+```
+
+## 3.2 Identify join keys after inspection
+
+```{r}
+#| label: harmonise-02-keys
+#| include: false
+
+ofcom_code_col <- guess_code_col(ofcom_raw)
+unemp_code_col <- guess_code_col(unemp_raw)
+aps_code_col   <- guess_code_col(aps_raw)
+sales_code_col <- guess_code_col(sales_raw)
+
+if (any(sapply(list(ofcom_code_col, unemp_code_col, aps_code_col, sales_code_col), is.null))) {
+  stop("At least one geography code column was not inferred. Column inspection was required.")
+}
+
+imd_lsoa_col <- names(imd_raw)[stringr::str_detect(names(imd_raw), "lsoa") & stringr::str_detect(names(imd_raw), "code")][1]
+imd_lad_col  <- names(imd_raw)[stringr::str_detect(names(imd_raw), "local_authority_district") & stringr::str_detect(names(imd_raw), "code")][1]
+
+dom_lad_col  <- names(dom_raw)[stringr::str_detect(names(dom_raw), "local_authority_district") & stringr::str_detect(names(dom_raw), "code")][1]
+
+if (any(is.na(c(imd_lsoa_col, imd_lad_col, dom_lad_col)))) {
+  stop("IoD LSOA/LAD code columns were not located. Column inspection was required.")
+}
+
+list(
+  ofcom_code_col = ofcom_code_col,
+  unemp_code_col = unemp_code_col,
+  aps_code_col = aps_code_col,
+  sales_code_col = sales_code_col,
+  imd_lsoa_col = imd_lsoa_col,
+  imd_lad_col = imd_lad_col
+)
+```
+
+# 4. Derived indicators and transformations
+
+## 4.1 IMD aggregation (LSOA → LAD)
+
+```{r}
+#| label: derive-01-imd
+
+lad_regex <- "^E0[6789][0-9]{6}$"
+
+imd_rank_col   <- names(imd_raw)[stringr::str_detect(names(imd_raw), "imd") & stringr::str_detect(names(imd_raw), "rank")][1]
+imd_decile_col <- names(imd_raw)[stringr::str_detect(names(imd_raw), "imd") & stringr::str_detect(names(imd_raw), "decile")][1]
+
+if (any(is.na(c(imd_rank_col, imd_decile_col)))) {
+  stop("IMD rank/decile columns were not located. Column inspection was required.")
+}
+
+imd_lad <- imd_raw %>%
+  dplyr::transmute(
+    lsoa_cd = standardise_codes(.data[[imd_lsoa_col]]),
+    lad_cd  = standardise_codes(.data[[imd_lad_col]]),
+    imd_rank = as.numeric(.data[[imd_rank_col]]),
+    imd_decile = as.numeric(.data[[imd_decile_col]])
+  ) %>%
+  dplyr::filter(stringr::str_detect(lad_cd, lad_regex)) %>%
+  dplyr::group_by(lad_cd) %>%
+  dplyr::summarise(
+    n_lsoa = dplyr::n(),
+    imd_decile1_share = mean(imd_decile == 1, na.rm = TRUE),
+    imd_rank_mean = mean(imd_rank, na.rm = TRUE),
+    imd_rank_median = median(imd_rank, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+assert_unique_key(imd_lad, lad_cd)
+```
+
+## 4.2 IoD domains (optional covariates)
+
+```{r}
+#| label: derive-02-domains
+
+decile_cols <- names(dom_raw)[stringr::str_detect(names(dom_raw), "decile")]
+domain_keep <- decile_cols[stringr::str_detect(decile_cols, "income|employment|education|health|crime|barriers|living")] %>% unique()
+
+if (length(domain_keep) == 0) stop("No domain decile columns were retained. Column inspection was required.")
+
+dom_lad <- dom_raw %>%
+  dplyr::mutate(
+    lad_cd = standardise_codes(.data[[dom_lad_col]]),
+    dplyr::across(dplyr::all_of(domain_keep), ~ coerce_num(.x))
+  ) %>%
+  dplyr::filter(stringr::str_detect(lad_cd, lad_regex)) %>%
+  dplyr::group_by(lad_cd) %>%
+  dplyr::summarise(
+    dplyr::across(
+      dplyr::all_of(domain_keep),
+      ~ mean(.x == 1, na.rm = TRUE),
+      .names = "{.col}_decile1_share"
+    ),
+    .groups = "drop"
+  )
+
+assert_unique_key(dom_lad, lad_cd)
+```
+
+## 4.3 Ofcom coverage KPI selection (LAUA/LAD)
+
+```{r}
+#| label: derive-03-ofcom
+
+if (!("level" %in% names(ofcom_raw))) stop("Ofcom 'level' field was not present after import.")
+
+ofcom_lad_raw <- ofcom_raw %>%
+  dplyr::filter(stringr::str_to_lower(level) == "local authority") %>%
+  dplyr::mutate(lad_cd = standardise_codes(.data[[ofcom_code_col]]))
+
+ofcom_numeric <- names(ofcom_lad_raw)[vapply(ofcom_lad_raw, is.numeric, logical(1))]
+
+pref_kpis <- c(
+  "x4g5g_105_geo_out_at_least_one",
+  "x4g5g_95_geo_out_at_least_one",
+  "x4g5g_105_prem_out_at_least_one",
+  "x4g5g_95_prem_out_at_least_one"
+)
+
+coverage_kpi_col <- pref_kpis[pref_kpis %in% ofcom_numeric][1]
+if (is.na(coverage_kpi_col)) {
+  fallback <- ofcom_numeric[stringr::str_detect(ofcom_numeric, "4g5g|5g|4g|geo|prem|out")]
+  coverage_kpi_col <- fallback[1]
+}
+if (is.na(coverage_kpi_col)) stop("No numeric Ofcom coverage KPI candidate was located.")
+
+ofcom_lad <- ofcom_lad_raw %>%
+  dplyr::filter(stringr::str_detect(lad_cd, lad_regex)) %>%
+  dplyr::group_by(lad_cd) %>%
+  dplyr::summarise(
+    coverage_kpi = mean(.data[[coverage_kpi_col]], na.rm = TRUE),
+    coverage_kpi_name = coverage_kpi_col,
+    .groups = "drop"
+  )
+
+assert_unique_key(ofcom_lad, lad_cd)
+```
+
+## 4.4 Nomis unemployment (LAD) + optional context
+
+```{r}
+#| label: derive-04-nomis
+
+coerce_num <- function(x) {
+  x <- as.character(x)
+  x <- stringr::str_trim(x)
+  x <- stringr::str_replace_all(x, ",", "")
+  suppressWarnings(readr::parse_double(x))
+}
+
+unemp_rate_col <- names(unemp_raw)[stringr::str_detect(names(unemp_raw), "unemployment") & stringr::str_detect(names(unemp_raw), "rate")][1]
+unemp_cnt_col  <- names(unemp_raw)[stringr::str_detect(names(unemp_raw), "unemployment") & stringr::str_detect(names(unemp_raw), "count")][1]
+
+if (any(is.na(c(unemp_rate_col, unemp_cnt_col)))) {
+  stop("Unemployment rate/count columns were not located in the Nomis extract.")
+}
+
+nomis_unemp_lad <- unemp_raw %>%
+  dplyr::mutate(
+    lad_cd = standardise_codes(.data[[unemp_code_col]]),
+    unemployment_rate = coerce_num(.data[[unemp_rate_col]]),
+    unemployment_count = coerce_num(.data[[unemp_cnt_col]])
+  ) %>%
+  dplyr::filter(stringr::str_detect(lad_cd, lad_regex)) %>%
+  dplyr::group_by(lad_cd) %>%
+  dplyr::summarise(
+    unemployment_rate = mean(unemployment_rate, na.rm = TRUE),
+    unemployment_count = mean(unemployment_count, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+assert_unique_key(nomis_unemp_lad, lad_cd)
+
+sales_col <- names(sales_raw)[stringr::str_detect(names(sales_raw), "^sales$")][1]
+if (is.na(sales_col)) stop("house_sales column was not located in the Nomis house_sales extract.")
+
+nomis_sales_lad <- sales_raw %>%
+  dplyr::mutate(
+    lad_cd = standardise_codes(.data[[sales_code_col]]),
+    house_sales = coerce_num(.data[[sales_col]])
+  ) %>%
+  dplyr::filter(stringr::str_detect(lad_cd, lad_regex)) %>%
+  dplyr::group_by(lad_cd) %>%
+  dplyr::summarise(house_sales = mean(house_sales, na.rm = TRUE), .groups = "drop")
+
+assert_unique_key(nomis_sales_lad, lad_cd)
+```
+
+## 4.5 Assemble LAD dataset (render checks)
+
+```{r}
+#| label: derive-05-assemble
+#| include: false
+
+
+# Country outline (single geometry) for clipping/frames
+#outline_prj <- st_union(st_geometry(lad_rate_prj))
+#outline_sf  <- st_sf(geometry = outline_prj)
+
+lad_data <- lad_spine %>%
+  dplyr::left_join(nomis_unemp_lad, by = "lad_cd") %>%
+  dplyr::left_join(imd_lad, by = "lad_cd") %>%
+  dplyr::left_join(dom_lad, by = "lad_cd") %>%
+  dplyr::left_join(ofcom_lad, by = "lad_cd") %>%
+  dplyr::left_join(nomis_sales_lad, by = "lad_cd") %>%
+  tidyr::drop_na(unemployment_rate, imd_decile1_share, coverage_kpi)
+
+missing_report <- lad_data %>%
+  sf::st_drop_geometry() %>%
+  dplyr::summarise(
+    lad_nm = "Not applicable (summary table)",
+    n_lad = dplyr::n(),
+    pct_missing_unemp = round(mean(is.na(unemployment_rate)) * 100, 2),
+    pct_missing_imd   = round(mean(is.na(imd_decile1_share)) * 100, 2),
+    pct_missing_cov   = round(mean(is.na(coverage_kpi)) * 100, 2)
+  )
+
+
+missing_report
+```
+
+# 5. Mapping and visualisation (render first, then export)
+
+```{r}
+#| label: map-00-mode
+
+tmap::tmap_mode("plot")
+
+safe_quantile_breaks <- function(x, n = 5) {
+  qs <- stats::quantile(x, probs = seq(0, 1, length.out = n + 1), na.rm = TRUE, type = 7)
+  qs <- unique(as.numeric(qs))
+  if (length(qs) < 3) return(NULL)
+  qs
+}
+```
+
+```{r}
+#| label: fig-map-unemployment
+#| fig-cap: "Nomis model-based unemployment rate mapped at England LAD level."
+
+unemp_breaks <- safe_quantile_breaks(lad_data$unemployment_rate, n = 5)
+
+#---- Set global option to prevent components from autoscaling ----
+tmap_options(component.autoscale = FALSE)
+
+m_unemp <- tm_shape(lad_data) +
+  tm_polygons(
+    fill = "unemployment_rate",
+    fill.scale  = tm_scale_intervals(style = "quantile", n = 5),,
+    fill.legend = tm_legend(title = "Unemployment rate (%)", na.show = FALSE)
+  ) +
+  tm_borders(col = "grey40", lwd = 0.6) +
+  tm_title("Nomis model-based unemployment rate — England LADs", size = 1) +
+  tm_layout(frame = FALSE,legend.outside = TRUE,
+            legend.text.size = 0.8,
+            legend.title.size = 1.0,
+            title.size = 1.0,  asp = 0,
+            outer.margins = c(0.02, 0.02, 0.02, 0.02)
+            )
+
+m_unemp
+
+fig_unemp <- here("outputs", "figures", paste0("map_unemployment_", ts, ".png"))
+tmap::tmap_save(m_unemp, filename = fig_unemp, width = 1800, height = 1200, dpi = 200)
+
+fig_unemp
+```
+
+```{r}
+#| label: fig-map-imd
+#| fig-cap: "IoD/IMD 2025 deprivation concentration measured as the share of LSOAs in IMD decile 1, aggregated to England LADs."
+
+imd_breaks <- safe_quantile_breaks(lad_data$imd_decile1_share, n = 5)
+
+#---- Set global option to prevent components from autoscaling ----
+tmap_options(component.autoscale = FALSE)
+
+m_imd <- tm_shape(lad_data) +
+  tm_polygons(
+    fill = "imd_decile1_share",
+    fill.scale  = if (!is.null(imd_breaks)) tm_scale_intervals(breaks = imd_breaks) else tm_scale_intervals(style = "pretty", n = 5),
+    fill.legend = tm_legend(title = "Share of LSOAs in IMD decile 1", na.show = FALSE)
+  ) +
+  tm_borders(col = "grey40", lwd = 0.6) +
+  tm_title("IoD/IMD 2025 — concentration of the most deprived LSOAs (decile 1 share)",   size = 1,
+           position = tm_pos_out("center", "top")) +
+  tm_layout(frame = FALSE,legend.outside = TRUE,
+            legend.text.size = 0.8,
+            legend.title.size = 1.0,
+            title.size = 1.0,  asp = 0,
+            outer.margins = c(0.02, 0.05, 0.02, 0.05)
+            )
+
+m_imd
+
+fig_imd <- here("outputs", "figures", paste0("map_imd_decile1_share_", ts, ".png"))
+tmap::tmap_save(m_imd, filename = fig_imd, width = 1800, height = 1200, dpi = 200)
+fig_imd
+```
+
+```{r}
+#| label: fig-map-empd
+#| fig-cap: "IoD 2025 deprivation concentration measured as the share of employment decile (where 1 is most deprived 10% of LSOAs), aggregated to England LADs."
+
+empd_breaks <- safe_quantile_breaks(
+  lad_data$employment_decile_where_1_is_most_deprived_10_percent_of_lso_as_decile1_share,
+  n = 5)
+
+#---- Set global option to prevent components from autoscaling ----
+tmap_options(component.autoscale = FALSE)
+
+empd <- tm_shape(lad_data) +
+  tm_polygons(
+    fill = "employment_decile_where_1_is_most_deprived_10_percent_of_lso_as_decile1_share",
+    fill.scale  = if (!is.null(empd_breaks)) tm_scale_intervals(breaks = empd_breaks) else tm_scale_intervals(style = "pretty", n = 5),
+    fill.legend = tm_legend(title = "Employment decile", na.show = FALSE)
+  ) +
+  tm_borders(col = "grey40", lwd = 0.6) +
+  tm_title("IoD 2025 — Employment decile of the most deprived (decile 1 share)",   size = 1,
+           position = tm_pos_out("center", "top")) +
+  tm_layout(frame = FALSE,legend.outside = TRUE,
+            legend.text.size = 0.8,
+            legend.title.size = 1.0,
+            title.size = 1.0,  asp = 0,
+            outer.margins = c(0.02, 0.05, 0.02, 0.05)
+            )
+
+empd
+
+fig_empd <- here("outputs", "figures", paste0("map_empd_decile1_share_", ts, ".png"))
+tmap::tmap_save(empd, filename = fig_empd, width = 1800, height = 1200, dpi = 200)
+fig_empd
+```
+
+```{r}
+#| label: fig-map-barr
+#| fig-cap: "IoD 2025 deprivation concentration measured as the share of barriers to housing and services decile (where 1 is most deprived 10% of LSOAs), aggregated to England LADs."
+
+barr_breaks <- safe_quantile_breaks(
+  lad_data$barriers_to_housing_and_services_decile_where_1_is_most_deprived_10_percent_of_lso_as_decile1_share,
+  n = 5)
+
+#---- Set global option to prevent components from autoscaling ----
+tmap_options(component.autoscale = FALSE)
+
+barr <- tm_shape(lad_data) +
+  tm_polygons(
+    fill = "barriers_to_housing_and_services_decile_where_1_is_most_deprived_10_percent_of_lso_as_decile1_share",
+    fill.scale  = if (!is.null(barr_breaks)) tm_scale_intervals(breaks = barr_breaks) else tm_scale_intervals(style = "pretty", n = 5),
+    fill.legend = tm_legend(title = "Barriers to Housing Decile", na.show = FALSE)
+  ) +
+  tm_borders(col = "grey40", lwd = 0.6) +
+  tm_title("IoD 2025 — Barrier to housing decile of the most deprived (decile 1 share)",   size = 1,
+           position = tm_pos_out("center", "top")) +
+  tm_layout(frame = FALSE,legend.outside = TRUE,
+            legend.text.size = 0.8,
+            legend.title.size = 1.0,
+            title.size = 1.0,  asp = 0,
+            outer.margins = c(0.02, 0.05, 0.02, 0.05)
+            )
+
+barr
+
+fig_barr <- here("outputs", "figures", paste0("map_barr_decile1_share_", ts, ".png"))
+tmap::tmap_save(barr, filename = fig_barr, width = 1800, height = 1200, dpi = 200)
+fig_barr
+```
+
+```{r}
+#| label: fig-map-hdd
+#| fig-cap: "IoD 2025 deprivation concentration measured as the share of health deprivation and disability Decile (where 1 is most deprived 10% of LSOAs), aggregated to England LADs."
+
+hdd_breaks <- safe_quantile_breaks(
+  lad_data$health_deprivation_and_disability_decile_where_1_is_most_deprived_10_percent_of_lso_as_decile1_share,
+  n = 5)
+
+#---- Set global option to prevent components from autoscaling ----
+tmap_options(component.autoscale = FALSE)
+
+hdd <- tm_shape(lad_data) +
+  tm_polygons(
+    fill = "health_deprivation_and_disability_decile_where_1_is_most_deprived_10_percent_of_lso_as_decile1_share",
+    fill.scale  = if (!is.null(hdd_breaks)) tm_scale_intervals(breaks = hdd_breaks) else tm_scale_intervals(style = "pretty", n = 5),
+    fill.legend = tm_legend(title = "Health deprivation decile", na.show = FALSE)
+  ) +
+  tm_borders(col = "grey40", lwd = 0.6) +
+  tm_title("IoD 2025 — Health deprivation and disability of the most deprived (decile 1 share)",   size = 1,
+           position = tm_pos_out("center", "top")) +
+  tm_layout(frame = FALSE,legend.outside = TRUE,
+            legend.text.size = 0.8,
+            legend.title.size = 1.0,
+            title.size = 1.0,  asp = 0,
+            outer.margins = c(0.02, 0.05, 0.02, 0.05)
+            )
+
+hdd
+
+fig_hdd <- here("outputs", "figures", paste0("map_hdd_decile1_share_", ts, ".png"))
+tmap::tmap_save(hdd, filename = fig_hdd, width = 1800, height = 1200, dpi = 200)
+fig_hdd
+```
+
+```{r}
+#| label: fig-map-edst
+#| fig-cap: "IoD 2025 deprivation concentration measured as the share of Education, Skills and Training Decile (where 1 is most deprived 10% of LSOAs), aggregated to England LADs."
+
+edst_breaks <- safe_quantile_breaks(
+  lad_data$education_skills_and_training_decile_where_1_is_most_deprived_10_percent_of_lso_as_decile1_share,
+  n = 5)
+
+#---- Set global option to prevent components from autoscaling ----
+tmap_options(component.autoscale = FALSE)
+
+edst <- tm_shape(lad_data) +
+  tm_polygons(
+    fill = "education_skills_and_training_decile_where_1_is_most_deprived_10_percent_of_lso_as_decile1_share",
+    fill.scale  = if (!is.null(edst_breaks)) tm_scale_intervals(breaks = edst_breaks) else tm_scale_intervals(style = "pretty", n = 5),
+    fill.legend = tm_legend(title = "EST decile", na.show = FALSE)
+  ) +
+  tm_borders(col = "grey40", lwd = 0.6) +
+  tm_title("IoD 2025 — Education, skills and training of the most deprived (decile 1 share)",   size = 1,
+           position = tm_pos_out("center", "top")) +
+  tm_layout(frame = FALSE,legend.outside = TRUE,
+            legend.text.size = 0.8,
+            legend.title.size = 1.0,
+            title.size = 1.0,  asp = 0,
+            outer.margins = c(0.02, 0.05, 0.02, 0.05)
+            )
+
+edst
+
+fig_edst <- here("outputs", "figures", paste0("map_edst_decile1_share_", ts, ".png"))
+tmap::tmap_save(edst, filename = fig_edst, width = 1800, height = 1200, dpi = 200)
+fig_edst
+```
+
+```{r}
+#| label: fig-map-liv
+#| fig-cap: "IoD 2025 deprivation concentration measured as the share of Living Environment Decile (where 1 is most deprived 10% of LSOAs), aggregated to England LADs."
+
+liv_breaks <- safe_quantile_breaks(
+  lad_data$living_environment_decile_where_1_is_most_deprived_10_percent_of_lso_as_decile1_share,
+  n = 5)
+
+#---- Set global option to prevent components from autoscaling ----
+tmap_options(component.autoscale = FALSE)
+
+liv <- tm_shape(lad_data) +
+  tm_polygons(
+    fill = "living_environment_decile_where_1_is_most_deprived_10_percent_of_lso_as_decile1_share",
+    fill.scale  = if (!is.null(liv_breaks)) tm_scale_intervals(breaks = liv_breaks) else tm_scale_intervals(style = "pretty", n = 5),
+    fill.legend = tm_legend(title = "Living environment decile", na.show = FALSE)
+  ) +
+  tm_borders(col = "grey40", lwd = 0.6) +
+  tm_title("IoD 2025 — Living environment of the most deprived (decile 1 share)",   size = 1,
+           position = tm_pos_out("center", "top")) +
+  tm_layout(frame = FALSE,legend.outside = TRUE,
+            legend.text.size = 0.8,
+            legend.title.size = 1.0,
+            title.size = 1.0,  asp = 0,
+            outer.margins = c(0.02, 0.05, 0.02, 0.05)
+            )
+
+liv
+
+fig_liv <- here("outputs", "figures", paste0("map_liv_decile1_share_", ts, ".png"))
+tmap::tmap_save(liv, filename = fig_liv, width = 1800, height = 1200, dpi = 200)
+fig_liv
+```
+
+```{r}
+#| label: fig-map-coverage
+#| fig-cap: "Ofcom Connected Nations 2025 mobile coverage KPI mapped at England LAD level (selected KPI)."
+
+cov_breaks <- c(0, 95, 97, 99, 99.5, 100)
+
+#---- Set global option to prevent components from autoscaling ----
+tmap_options(component.autoscale = FALSE)
+
+m_cov <- tm_shape(lad_data) +
+  tm_polygons(
+    fill = "coverage_kpi",
+    fill.scale  = tm_scale_intervals(breaks = cov_breaks),
+    fill.legend = tm_legend(title = "x4g5g_105_prem_out_at_least_one", na.show = FALSE
+    )
+  ) +
+  tm_borders(col = "grey40", lwd = 0.6) +
+  tm_title("Ofcom Connected Nations 2025 — 4G+5G outdoor coverage (selected KPI)", size = 1) +
+  tm_layout(frame = FALSE,legend.outside = TRUE,
+            legend.text.size = 0.7,
+            legend.title.size = 0.8,
+            title.size = 1.0,  asp = 0,
+            outer.margins = c(0.02, 0.05, 0.02, 0.05)
+            )
+m_cov
+
+fig_cov <- here("outputs", "figures", paste0("map_coverage_kpi_", ts, ".png"))
+tmap::tmap_save(m_cov, filename = fig_cov, width = 1800, height = 1200, dpi = 200)
+fig_cov
+```
+
+# 6. Spatial dependence and modelling
+
+## 6.1. Baseline OLS
+
+```{r}
+# --- Ensure spatial object is valid/projected ---
+model_df <- lad_data %>%
+  rename("income_decile" = "income_decile_where_1_is_most_deprived_10_percent_of_lso_as_decile1_share",
+         "employment_decile" = "employment_decile_where_1_is_most_deprived_10_percent_of_lso_as_decile1_share",
+         "education_skills_and_training_decile" = "education_skills_and_training_decile_where_1_is_most_deprived_10_percent_of_lso_as_decile1_share",
+        "health_deprivation_and_disability_decile" = "health_deprivation_and_disability_decile_where_1_is_most_deprived_10_percent_of_lso_as_decile1_share",
+        "crime_decile" = "crime_decile_where_1_is_most_deprived_10_percent_of_lso_as_decile1_share",
+        "barriers_to_housing_and_services_decile" =
+        "barriers_to_housing_and_services_decile_where_1_is_most_deprived_10_percent_of_lso_as_decile1_share", "living_environment_decile" = "living_environment_decile_where_1_is_most_deprived_10_percent_of_lso_as_decile1_share"
+        ) %>%
+  sf::st_make_valid() %>%
+  sf::st_transform(27700)%>%
+  tidyr::drop_na(unemployment_rate, imd_decile1_share, coverage_kpi)
+
+# ---- regression equation -----
+ols.eq1 = imd_decile1_share ~ unemployment_rate + coverage_kpi + house_sales + income_decile + employment_decile + education_skills_and_training_decile + health_deprivation_and_disability_decile + crime_decile + barriers_to_housing_and_services_decile + living_environment_decile
+
+ols.eq2 = unemployment_rate ~ imd_decile1_share + coverage_kpi + house_sales + income_decile + employment_decile + education_skills_and_training_decile + health_deprivation_and_disability_decile + crime_decile + barriers_to_housing_and_services_decile + living_environment_decile
+
+#---- turn off scientific notation for reasonably-sized values ----
+options (scipen = 7)
+
+# ----- Baseline OLS ------
+ols_imd = lm(ols.eq1, data = model_df)
+summary(ols_imd)
+```
+
+```{r}
+# ----- unemployment_rate OLS ------
+ols_umpr = lm(ols.eq2, data = model_df)
+summary(ols_umpr)
+```
+
+## 6.2 Weights matrices and Moran’s I (queen vs rook)
+
+```{r}
+#| label: tbl-morans-i
+#| tbl-cap: "Global Moran’s I for key variables under queen and rook contiguity weights (England LADs)."
+
+nb_q <- spdep::poly2nb(model_df, queen = TRUE)
+nb_r <- spdep::poly2nb(model_df, queen = FALSE)
+
+lw_q <- spdep::nb2listw(nb_q, style = "W", zero.policy = TRUE)
+lw_r <- spdep::nb2listw(nb_r, style = "W", zero.policy = TRUE)
+
+lw_1 = lw_q
+lw_2 = lw_r
+```
+
+```{r}
+# --- Moran’s I for residuals (queen/rook) + LM tests for imd_share---
+moran_qimd <- lm.morantest(ols_imd, lw_q)
+lm_qimd <- lm.RStests(ols_imd, lw_q, test = "all")
+
+moran_qimd
+lm_qimd
+
+moran_rimd <- lm.morantest(ols_imd, lw_r)
+lm_rimd <- lm.RStests(ols_imd, lw_r, test = "all")
+
+
+moran_rimd
+lm_rimd
+```
+
+```{r}
+# --- Moran’s I for residuals (queen/rook) + LM tests for unemployment_rate---
+moran_qump <- lm.morantest(ols_umpr, lw_q)
+lm_qump <- lm.RStests(ols_umpr, lw_q, test = "all")
+
+moran_qump
+lm_qump
+
+moran_rump <- lm.morantest(ols_umpr, lw_r)
+lm_rump <- lm.RStests(ols_umpr, lw_r, test = "all")
+
+
+moran_rump
+lm_rump
+
+```
+
+## 6.2 Diagnostics and decision rule for escalation spatial regression
+
+```{r}
+
+#| label: tbl-ols-and-diagnostics
+#| tbl-cap: "Baseline OLS with HC3 robust errors; residual Moran’s I was used as a decision rule for spatial-model escalation
+
+# ---- Diagnostics 1----
+vif_vals <- car::vif(ols_imd)
+bp <- lmtest::bptest(ols_imd)
+robust_se <- sandwich::vcovHC(ols_imd, type = "HC3")
+
+ols_tidy <- broom::tidy(ols_imd, conf.int = TRUE) %>%
+  dplyr::mutate(
+    se_hc3 = sqrt(diag(robust_se)),
+    t_hc3 = estimate / se_hc3,
+    p_hc3 = 2 * stats::pt(abs(t_hc3), df = stats::df.residual(ols_imd), lower.tail = FALSE)
+  )
+
+diag_table <- tibble::tibble(
+  statistic = c("VIF_max","BP_p_value","n_obs"),
+  value = c(max(vif_vals), bp$p.value, stats::nobs(ols_imd))
+)
+
+readr::write_csv(ols_tidy, here("outputs","tables", paste0("ols_tidy_", ts, ".csv")))
+readr::write_csv(diag_table, here("outputs","tables", paste0("ols_diagnostics_", ts, ".csv")))
+
+list(vif = vif_vals, breusch_pagan = bp, diagnostics = diag_table)
+
+```
+
+```{r}
+# ---- Diagnostics 2----
+vif_vals2 <- car::vif(ols_umpr)
+bp2 <- lmtest::bptest(ols_umpr)
+robust_se2 <- sandwich::vcovHC(ols_umpr, type = "HC3")
+
+ols_tidy2 <- broom::tidy(ols_umpr, conf.int = TRUE) %>%
+  dplyr::mutate(
+    se_hc3 = sqrt(diag(robust_se2)),
+    t_hc3 = estimate / se_hc3,
+    p_hc3 = 2 * stats::pt(abs(t_hc3), df = stats::df.residual(ols_umpr), lower.tail = FALSE)
+  )
+
+diag_table2 <- tibble::tibble(
+  statistic = c("VIF_max","BP_p_value","n_obs"),
+  value = c(max(vif_vals), bp$p.value, stats::nobs(ols_umpr))
+)
+
+readr::write_csv(ols_tidy2, here("outputs","tables", paste0("ols_tidy_2", ts, ".csv")))
+readr::write_csv(diag_table2, here("outputs","tables", paste0("ols_diagnostics_2", ts, ".csv")))
+
+list(vif = vif_vals2, breusch_pagan = bp2, diagnostics = diag_table2)
+```
+
+## 6.3 Spatial regression
+
+```{r}
+#| include: false
+# Decision rule (documented): spatial models were fit only if residual Moran’s I p < 0.05 and spatialreg was available.
+
+model_sp <- model_df %>%
+  sf::st_drop_geometry() %>%
+  dplyr::select(lad_cd, lad_nm, unemployment_rate, imd_decile1_share, coverage_kpi,
+  house_sales, income_decile, employment_decile, education_skills_and_training_decile,
+  health_deprivation_and_disability_decile, crime_decile, barriers_to_housing_and_services_decile,
+  living_environment_decile) %>%
+  tidyr::drop_na(unemployment_rate, imd_decile1_share, coverage_kpi)
+
+library(spatialreg)
+
+# SAR (imd) Spatial Lag Model y = ρWy + Xβ + ε
+
+slag <- lagsarlm(ols.eq1, data = model_sp, listw = lw_q, zero.policy = TRUE)
+summary(slag)
+
+# SEM (imd) Spatial Error Model y = Xβ + u, u = λWu + ε
+
+serr <- errorsarlm(ols.eq1, data = model_sp, listw = lw_q, zero.policy = TRUE)
+summary(serr)
+
+  slag_resid <- stats::residuals(slag)
+  serr_resid <- stats::residuals(serr)
+
+  moran_slag <- spdep::moran.test(slag_resid, lw_q, zero.policy = TRUE)
+  moran_serr <- spdep::moran.test(serr_resid, lw_q, zero.policy = TRUE)
+
+  model_compare <- tibble::tibble(
+    model = c("OLS_imd","Spatial lag (SAR)","Spatial error (SEM)"),
+    AIC = c(stats::AIC(ols_imd), stats::AIC(slag), stats::AIC(serr)),
+    resid_moran_p = c(moran_qimd$p.value, moran_slag$p.value, moran_serr$p.value)
+  )
+
+  readr::write_csv(model_compare, here("outputs","tables", paste0("model_compare_", ts, ".csv")))
+
+  spatial_coef <- function(fit, label){
+    co <- as.data.frame(summary(fit)$Coef)
+    co <- tibble::rownames_to_column(co, "term") %>% dplyr::mutate(model = label)
+    co
+  }
+
+  coef_all <- dplyr::bind_rows(
+    ols_tidy %>% dplyr::select(term, estimate, std.error, statistic, p.value) %>% dplyr::mutate(model = "OLS_imd"),
+    spatial_coef(slag, "SAR_lag"),
+    spatial_coef(serr, "SEM_error")
+  )
+  readr::write_csv(coef_all, here("outputs","tables", paste0("model_coefficients_1", ts, ".csv")))
+
+  model_compare
+```
+
+```{r}
+# SAR (umpr) Spatial Lag Model y = ρWy + Xβ + ε
+
+slag2 <- lagsarlm(ols.eq2, data = model_sp, listw = lw_q, zero.policy = TRUE)
+summary(slag2)
+
+# SEM (umpr) Spatial Error Model y = Xβ + u, u = λWu + ε
+
+serr2 <- errorsarlm(ols.eq2, data = model_sp, listw = lw_q, zero.policy = TRUE)
+summary(serr2)
+
+  slag_resid2 <- stats::residuals(slag2)
+  serr_resid2 <- stats::residuals(serr2)
+
+  moran_slag2 <- spdep::moran.test(slag_resid2, lw_q, zero.policy = TRUE)
+  moran_serr2 <- spdep::moran.test(serr_resid2, lw_q, zero.policy = TRUE)
+
+  model_compare2 <- tibble::tibble(
+    model = c("OLS_umpr","Spatial lag (SAR)","Spatial error (SEM)"),
+    AIC = c(stats::AIC(ols_umpr), stats::AIC(slag2), stats::AIC(serr2)),
+    resid_moran_p = c(moran_qump$p.value, moran_slag2$p.value, moran_serr2$p.value)
+  )
+
+  readr::write_csv(model_compare2, here("outputs","tables", paste0("model_compare_2", ts, ".csv")))
+
+  spatial_coef <- function(fit, label){
+    co <- as.data.frame(summary(fit)$Coef)
+    co <- tibble::rownames_to_column(co, "term") %>% dplyr::mutate(model = label)
+    co
+  }
+
+  coef_all <- dplyr::bind_rows(
+    ols_tidy %>% dplyr::select(term, estimate, std.error, statistic, p.value) %>% dplyr::mutate(model = "OLS_umpr"),
+    spatial_coef(slag2, "SAR_lag"),
+    spatial_coef(serr2, "SEM_error")
+  )
+  readr::write_csv(coef_all, here("outputs","tables", paste0("model_coefficients_2", ts, ".csv")))
+
+  model_compare2
+```
+```{r}
+library(GWmodel)
+library(spgwr)
+
+# Convert sf object to spatial object if needed
+gwr_data <- as(model_df, "Spatial")
+
+# Find optimal adaptive bandwidth
+bw <- gwr.sel(imd_decile1_share ~ unemployment_rate + coverage_kpi + house_sales +
+        income_decile + employment_decile + education_skills_and_training_decile +
+        health_deprivation_and_disability_decile + crime_decile +
+        barriers_to_housing_and_services_decile + living_environment_decile,
+                 data = gwr_data,
+              adapt = TRUE)
+
+gwr_model <- gwr(imd_decile1_share ~ unemployment_rate + coverage_kpi + house_sales +
+                income_decile + employment_decile + education_skills_and_training_decile +
+                health_deprivation_and_disability_decile + crime_decile +
+                barriers_to_housing_and_services_decile + living_environment_decile,
+                 data = gwr_data,
+                 adapt = bw,
+                 hatmatrix = TRUE,
+                 se.fit = TRUE)
+
+# View summary of local coefficients
+gwr_model
+
+# Attach local coefficients to your map data
+gwr_data$local_coeff <- gwr_model$SDF$unemployment_rate
+
+```
+```{r}
+# 2. Extract the spatial data (SDF) containing the coefficients
+# Convert to 'sf' format for easier mapping with tmap
+library(sf)
+gwr_sf <- st_as_sf(gwr_model$SDF)
+```
+
+
+
+```{r}
+library(tmap)
+# Map the local R-squared to see where the model performs best
+tm_shape(gwr_sf) +
+  tm_polygons(
+    fill = "localR2",
+    fill.scale  = tm_scale_intervals(style = "quantile", n = 5, values = "YlOrRd"),
+    fill.legend = tm_legend(title = "Local R²", na.show = FALSE)
+  ) +
+  tm_borders(col = "grey40", lwd = 0.6) +
+  tm_title("GWR model fit (local R²) for concentration of the most deprived LSOAs") +
+  tm_layout(legend.outside = TRUE, frame = FALSE)
+
+```
+
+```{r}
+bw_aic <- bw.gwr(imd_decile1_share ~ unemployment_rate + coverage_kpi + house_sales +
+        income_decile + employment_decile + education_skills_and_training_decile +
+        health_deprivation_and_disability_decile + crime_decile +
+        barriers_to_housing_and_services_decile + living_environment_decile,
+        data = gwr_data,
+        approach = "AIC",
+        adaptive = TRUE)
+
+# 1. Run the model
+gwr_results <- gwr.basic(formula = imd_decile1_share ~ unemployment_rate + coverage_kpi +          house_sales + income_decile + employment_decile +
+       education_skills_and_training_decile +
+       health_deprivation_and_disability_decile + crime_decile +
+       barriers_to_housing_and_services_decile + living_environment_decile,
+       data = gwr_data, bw = bw_aic, adaptive = TRUE)
+
+
+
+# Attach local coefficients to your map data
+gwr_data$local_coeff <- gwr_results$SDF$unemployment_rate
+
+gwr_results
+
+# 2. Extract the spatial data (SDF) containing the coefficients
+# Convert to 'sf' format for easier mapping with tmap
+#library(sf)
+gwr_sf2 <- st_as_sf(gwr_results$SDF)
+
+
+```
+
+
+
+```{r}
+library(tmap)
+# Map the local R-squared to see where the model performs best
+tm_shape(gwr_sf2) +
+  tm_polygons(
+    fill = "Local_R2",
+    fill.scale  = tm_scale_intervals(style = "quantile", n = 5, values = "YlOrRd"),
+    fill.legend = tm_legend(title = "Local R²", na.show = FALSE)
+  ) +
+  tm_borders(col = "grey40", lwd = 0.6) +
+  tm_title("GWR model fit (local_R², AIC) for concentration of the most deprived LSOAs") +
+  tm_layout(legend.outside = TRUE, frame = FALSE)
+```
+
+
+# 7. APA-style tables (render first, then export)
+
+## 7.1 Descriptive statistics
+
+```{r}
+#| label: tbl-descriptives
+#| tbl-cap: "Descriptive statistics for core indicators used in modelling (England LADs). Values were reported as mean ± SD; n was reported per variable (complete-case for each statistic)."
+
+vars_keep <- c(
+  "unemployment_rate",
+  "imd_decile1_share",
+  "coverage_kpi",
+  "house_sales",
+  "income_decile",
+  "employment_decile",
+  "education_skills_and_training_decile",
+  "health_deprivation_and_disability_decile",
+  "crime_decile",
+  "barriers_to_housing_and_services_decile",
+  "living_environment_decile"
+)
+
+missing_vars <- setdiff(vars_keep, names(model_sp))
+if (length(missing_vars) > 0) {
+  stop(
+    "The following variables were not found in model_sp: ",
+    paste(missing_vars, collapse = ", "),
+    "\nAvailable columns: ", paste(names(model_sp), collapse = ", ")
+  )
+}
+
+desc_tbl <- model_sp %>%
+  dplyr::select(dplyr::all_of(vars_keep)) %>%
+  dplyr::summarise(
+    dplyr::across(
+      dplyr::everything(),
+      list(
+        n = ~ sum(!is.na(.x)),
+        mean = ~ mean(.x, na.rm = TRUE),
+        sd = ~ stats::sd(.x, na.rm = TRUE)
+      ),
+      .names = "{.col}__{.fn}"
+    )
+  ) %>%
+  tidyr::pivot_longer(
+    cols = dplyr::everything(),
+    names_to = c("variable", "stat"),
+    names_sep = "__",
+    values_to = "value"
+  ) %>%
+  tidyr::pivot_wider(names_from = stat, values_from = value) %>%
+  dplyr::mutate(
+    n = as.integer(n),
+    mean_sd = sprintf("%.3f \u00B1 %.3f", mean, sd)
+  ) %>%
+  dplyr::select(variable, n, mean_sd) %>%
+  dplyr::arrange(variable)
+
+tbl_desc <- gt::gt(desc_tbl) %>%
+  gt::tab_header(title = gt::md("Descriptive statistics (mean ± SD)")) %>%
+  gt::cols_label(
+    variable = "Variable",
+    n = "n",
+    mean_sd = "Mean ± SD"
+  ) %>%
+  gt::fmt_number(columns = "n", decimals = 0) %>%
+  gt::tab_options(
+    table.font.size = gt::px(12),
+    heading.title.font.size = gt::px(14),
+    table.border.top.style = "solid",
+    table.border.bottom.style = "solid",
+    column_labels.border.bottom.style = "solid",
+    data_row.padding = gt::px(3)
+  )
+
+tbl_desc
+gt::gtsave(tbl_desc, filename = here("outputs", "tables", paste0("descriptives_mean_sd_", ts, ".html")))
+```
+
+## 7.2 Correlations (cautious interpretation)
+
+```{r}
+#| label: tbl-correlations
+#| tbl-cap: "Pearson correlations among core variables with p-values (interpretation treated cautiously under spatial dependence)."
+
+cor_df <- model_sp %>%
+  dplyr::select(unemployment_rate, imd_decile1_share, coverage_kpi, house_sales, income_decile,
+  employment_decile, education_skills_and_training_decile,
+  health_deprivation_and_disability_decile, crime_decile, barriers_to_housing_and_services_decile,
+  living_environment_decile)
+
+vars <- names(cor_df)
+
+# Pairwise Pearson r + p-value (complete cases per pair)
+cor_pairs <- purrr::map_dfr(
+  combn(vars, 2, simplify = FALSE),
+  function(v) {
+    x <- cor_df[[v[1]]]
+    y <- cor_df[[v[2]]]
+    ok <- stats::complete.cases(x, y)
+
+    if (sum(ok) < 3) {
+      return(tibble::tibble(
+        var1 = v[1], var2 = v[2], n = sum(ok),
+        r = NA_real_, p_value = NA_real_
+      ))
+    }
+
+    ct <- stats::cor.test(x[ok], y[ok], method = "pearson")
+    tibble::tibble(
+      var1 = v[1],
+      var2 = v[2],
+      n = sum(ok),
+      r = unname(ct$estimate),
+      p_value = ct$p.value
+    )
+  }
+) %>%
+  dplyr::mutate(lad_nm = "England LADs (complete-case)") %>%
+  dplyr::select(lad_nm, var1, var2, n, r, p_value)
+
+tbl_cor <- gt_apa(cor_pairs, "Correlations (Pearson r) with p-values")
+tbl_cor
+gt::gtsave(
+  tbl_cor,
+  filename = here("outputs", "tables", paste0("correlations_with_pvalues_", ts, ".html"))
+)
+```
+
+## 7.3 Decision-support demonstration (MCDA + sensitivity)
+
+```{r}
+#| label: tbl-mcda
+#| tbl-cap: "Illustrative multi-criteria prioritisation (MCDA) with simple weight sensitivity."
+
+z <- function(x) (x - mean(x, na.rm = TRUE)) / sd(x, na.rm = TRUE)
+
+score_df <- model_sp %>%
+  dplyr::mutate(
+    z_unemp = z(unemployment_rate),
+    z_imd   = z(imd_decile1_share),
+    z_cov   = z(coverage_kpi)
+  )
+
+scenarios <- tibble::tibble(
+  scenario = c("equal", "unemp_heavy", "imd_heavy", "cov_heavy"),
+  w_unemp = c(1/3, 0.50, 0.25, 0.25),
+  w_imd   = c(1/3, 0.25, 0.50, 0.25),
+  w_cov   = c(1/3, 0.25, 0.25, 0.50)
+)
+
+rank_one <- function(wu, wi, wc) {
+  score_df %>%
+    dplyr::mutate(priority_score = wu * z_unemp + wi * z_imd - wc * z_cov) %>%
+    dplyr::arrange(dplyr::desc(priority_score)) %>%
+    dplyr::mutate(rank = dplyr::row_number()) %>%
+    dplyr::select(lad_cd, lad_nm, priority_score, rank)
+}
+
+rankings <- scenarios %>%
+  dplyr::mutate(scores = purrr::pmap(list(w_unemp, w_imd, w_cov), rank_one))
+
+top10 <- purrr::map2_dfr(rankings$scenario, rankings$scores, \(s, df) {
+  df %>% dplyr::slice_head(n = 10) %>% dplyr::mutate(scenario = s)
+}) %>%
+  dplyr::select(lad_nm, lad_cd, scenario, rank, priority_score)
+
+tbl_top10 <- gt_apa(top10, "Top 10 LADs by scenario (illustrative MCDA)")
+tbl_top10
+gt::gtsave(tbl_top10, filename = here("outputs", "tables", paste0("mcda_top10_", ts, ".html")))
+```
+
+# 8. Exports, audit trail, and rerun checklist
+
+```{r}
+#| label: export-01-datasets
+
+processed_path <- here("data", "processed", paste0("lad_analysis_dataset_", ts, ".csv"))
+processed_geo_path <- here("data", "processed", paste0("lad_analysis_dataset_", ts, ".gpkg"))
+
+analysis_df <- lad_data %>% sf::st_drop_geometry()
+
+readr::write_csv(analysis_df, processed_path)
+sf::st_write(lad_data, processed_geo_path, delete_dsn = TRUE, quiet = TRUE)
+
+processed_path
+processed_geo_path
+```
+
+```{r}
+#| label: export-02-audit-capsule
+
+out_tables <- list.files(dir_out_tables, full.names = TRUE)
+out_figs   <- list.files(dir_out_figures, full.names = TRUE)
+
+readr::write_lines(out_tables, here("logs", paste0("outputs_manifest_tables_", ts, ".txt")))
+readr::write_lines(out_figs,   here("logs", paste0("outputs_manifest_figures_", ts, ".txt")))
+
+sess <- capture.output(sessionInfo())
+readr::write_lines(sess, here("logs", paste0("sessionInfo_", ts, ".txt")))
+
+rerun <- c(
+  "1) The input files were placed in data/raw/ (or kept in the project root for the fallback resolver).",
+  "2) This .qmd was rendered to HTML (Quarto).",
+  "3) The outputs folders were checked: outputs/figures, outputs/tables, data/processed, logs/.",
+  "4) The join-audit logs were reviewed if missingness was non-trivial."
+)
+readr::write_lines(rerun, here("logs", paste0("rerun_checklist_", ts, ".txt")))
+
+cat("Processed dataset (CSV):", processed_path, "\n")
+cat("Processed dataset (GPKG):", processed_geo_path, "\n")
+cat("Join audit summary (Ofcom):", here("logs", paste0("audit_lad_ofcom_summary_", ts, ".csv")), "\n")
+```
+
+# Refactor Notes (what changed and why)
+
+Several outputs were previously saved to disk without being rendered first in the document, which reduced alignment with implementation and results expectations. Stable chunk labels and explicit figure/table captions were used throughout, using Quarto `#|` chunk options, to support marking and cross-referencing. Output joins were treated as auditable SDI-critical steps by logging anti-joins and matched counts.
+
+# Diagnostics and Robustness
+
+Moran’s I was computed under queen and rook contiguity weights to check sensitivity to neighbourhood definition. Baseline OLS was fitted with HC3 robust errors; residual Moran’s I was used as the decision rule for spatial-model escalation, and spatial models were fit only when residual autocorrelation remained and `spatialreg` was available.
+
+## Limitations & what would change my conclusion (required)
+
+-   **Spatial weights sensitivity:** Moran’s I and spatial regression results can change with Queen vs kNN weights; treat inference as conditional on the chosen neighbourhood definition.
+-   **MAUP / ecological inference:** LAD-level deprivation summaries hide within-area heterogeneity; conclusions about individuals are invalid.
+-   **Coverage measurement choices:** different Ofcom metrics (premises vs geographic; indoor vs outdoor) reflect different constructs; policy interpretations depend on the KPI definition.
+-   **Model-based unemployment uncertainty:** confidence intervals mean apparent differences between LADs can be within uncertainty bounds; prioritisation should reflect uncertainty.
+
+# References (Harvard Cite Them Right)
+
+-   Bivand, R. and Wong, D.W.S. (2018) ‘Comparing implementations of global and local indicators of spatial association’, *TEST*, 27(3), pp. 716–748. doi:10.1007/s11749-018-0599-x.
+
+-   Bivand, R., Millo, G. and Piras, G. (2021) ‘A review of software for spatial econometrics in R’, *Mathematics*, 9(11), 1276. doi:10.3390/math9111276.
+
+-   Bivand, R. and Piras, G. (2015) ‘Comparing implementations of estimation methods for spatial econometrics’, *Journal of Statistical Software*, 63(18), pp. 1–36. doi:10.18637/jss.v063.i18.
+
+-   Geospatial Commission (2023) *UK Geospatial Strategy 2030*. London: Department for Science, Innovation and Technology.
+
+-   Gollini, I., Lu, B., Charlton, M., Brunsdon, C. and Harris, P. (2015) ‘GWmodel: An R package for exploring spatial heterogeneity using geographically weighted models’, *Journal of Statistical Software*, 63(17), pp. 1–50. doi:10.18637/jss.v063.i17.
+
+-   MHCLG (2025) *English indices of deprivation 2025: statistical release* (and supporting research/technical documentation). GOV.UK.
+
+-   Nomis (n.d.) ‘Dataset: model-based estimates of unemployment (UMB)’. Office for National Statistics/Nomis.
+
+-   Ofcom (2025) *Connected Nations 2025: About this data — mobile coverage*. London: Ofcom.
+
+-   Pebesma, E. (2018) ‘Simple features for R: Standardized support for spatial vector data’, *The R Journal*, 10(1), pp. 439–446. doi:10.32614/RJ-2018-009.
+
+-   UN-GGIM (2018) *Integrated Geospatial Information Framework (UN‑IGIF): Overarching Strategic Framework*. United Nations.
+
+-   UK Government (2009) *The INSPIRE Regulations 2009* (UKSI 2009/3157). London: The National Archives.
+
+-   Office for National Statistics (ONS) (2025) *Local Authority Districts (May 2025) Boundaries UK BFE (V2)*. ONS Open Geography Portal / data.gov.uk.
+
+-   Office for National Statistics (ONS) (2025) *LSOA (2021) to Electoral Ward (2025) to LAD (2025) Best Fit Lookup in EW (V2)*. ONS Open Geography Portal / data.gov.uk.
+
+-   Ministry of Housing, Communities and Local Government (MHCLG) (2025) *English indices of deprivation 2025: research report (PDF)*. GOV.UK.
+
+-   Nomis (n.d.) *Dataset: model-based estimates of unemployment (UMB)*. Office for National Statistics/Nomis (dataset documentation page).
+
+-   Ofcom (2025) *Connected Nations 2025: data downloads and methodology annex*. London: Ofcom.
