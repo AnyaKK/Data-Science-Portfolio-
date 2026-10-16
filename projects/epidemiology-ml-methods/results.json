@@ -1,0 +1,31 @@
+{
+  "data": {
+    "n_weeks": 179,
+    "synthetic": true
+  },
+  "clustering": {
+    "n_clusters": 3,
+    "silhouette_score": 0.3655,
+    "cluster_counts": {
+      "0": 77,
+      "1": 72,
+      "2": 30
+    }
+  },
+  "classification": {
+    "time_series_cv_folds": 5,
+    "mean_roc_auc": 0.8702,
+    "mean_accuracy": 0.7862
+  },
+  "time_series": {
+    "model": "AutoReg(lags=4)",
+    "holdout_weeks": 36,
+    "mae": 5.8095
+  },
+  "probabilistic_count_model": {
+    "model": "Poisson GLM",
+    "aic": 919.9478,
+    "deviance": 167.9699,
+    "n_observations": 179
+  }
+}
