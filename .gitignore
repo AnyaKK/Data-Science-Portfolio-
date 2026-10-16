@@ -1,0 +1,20 @@
+# Local environments and caches
+.env
+.venv/
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.Rhistory
+.RData
+
+# Generated datasets from the notebooks
+covid.csv
+dataset_part_1.csv
+dataset_part_2.csv
+dataset_part_3.csv
+spacex_web_scraped.csv
+
+# Office temporary files
+~$*.xlsx
+~$*.pbix
+
