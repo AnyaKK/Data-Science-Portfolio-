@@ -1,6 +1,6 @@
 # Local R and Python source audit
 
-This audit records how the local study folders were reviewed for this portfolio branch. It is deliberately written without personal document names, student identifiers, account details or confidential data fields.
+This audit records how the local study folders were reviewed for the October 2026 portfolio update. It is deliberately written without personal document names, student identifiers, account details or confidential data fields.
 
 ## Scope reviewed
 
@@ -12,14 +12,14 @@ The review covered the main `UEL_DS` folder and its nested data-science `Project
 | --- | --- |
 | Already represented | SpaceX capstone, King County regression, Boston statistics, global COVID-19 analysis in R, stock/revenue visualisation, business-intelligence work, epidemiology methods, weather API practice and Bash practice |
 | Added as project folders | Heart-disease GA/PSO feature selection, Starbucks offer-response analysis, loan classification assessment and spatial digital-infrastructure analysis in R |
-| Added as learning collections | Python foundations, data analysis, visualisation, machine learning, statistics and data engineering; R foundations and data analysis |
+| Added as learning collections | Python foundations, data analysis, visualisation, machine learning, statistics and data engineering; R foundations, data analysis, data import and visualisation |
 | Preserved locally only | Exact source notebooks/scripts, raw private or large data, course packs, reports, binaries and duplicate checkpoints |
 
-Sixty-nine sanitized notebooks were prepared for this branch: three new project notebooks and 66 learning notebooks. A fourth new project is supplied as an R/Quarto source document.
+Sixty-nine sanitized notebooks were prepared during the original organisation work: three project notebooks and 66 learning notebooks. A fourth project is supplied as an R/Quarto source document. The final audit added one previously missed R data-import and visualisation script with its 96-row teaching dataset.
 
 ## Unchanged local archive
 
-Before sanitising any notebook, 311 R/Python source files were copied byte-for-byte into `local-only/originals/`; source and archive SHA-256 checksums matched. Three Starbucks source-data files were then added to that archive. The entire `local-only/` tree is excluded by `.gitignore` and is not part of the pull request.
+Before sanitising any notebook, 311 R/Python source files were copied byte-for-byte into `local-only/originals/`; source and archive SHA-256 checksums matched. The final audit located one additional R script and raised the verified code-copy count to 312. Supporting source data for the Starbucks and R visualisation work is also retained there. The entire `local-only/` tree is excluded by `.gitignore` and is not part of the pull request.
 
 The archive groups files by their source area:
 
@@ -32,6 +32,7 @@ The archive groups files by their source area:
 | Data-ecology R work | 5 |
 | Dissertation notebooks | 2 |
 | Separate R analysis | 2 |
+| Standalone R visualisation | 1 |
 
 These counts include duplicates and alternate versions because the archive's purpose is preservation, not presentation.
 
@@ -52,6 +53,7 @@ These counts include duplicates and alternate versions because the archive's pur
 
 - R foundations, data-import, data-frame, HTTP, scraping, charting and tidyverse exercises;
 - data-analysis/model-development review notebooks;
+- a standalone flower-data import and base-graphics exercise;
 - the global COVID-19 and OpenWeather work already represented in the repository;
 - a spatial digital-infrastructure assessment built in Quarto;
 - survey-analysis scripts whose respondent data is sensitive; and
@@ -70,10 +72,12 @@ The following material remains local-only:
 - duplicate notebook checkpoints and the earlier incomplete Windows checkout; and
 - third-party tutorials or course packs where a completed personal contribution cannot be separated confidently from the supplied material.
 
-Git-ready notebooks retain visible course attribution, have output cells and transient metadata removed, and replace machine-specific user-home prefixes. The unchanged originals remain available locally for comparison.
+One substantial predictive-web-analytics notebook was also kept local-only because it still contains a machine-specific input path, lacks clear dataset provenance and licensing, and is accompanied by reports containing personal identifiers. It requires a separate reproducibility and privacy review before publication.
+
+Git-ready notebooks retain visible course attribution. Newly prepared or sanitised copies have unnecessary output cells and transient metadata removed where needed, and machine-specific user-home prefixes are replaced. Earlier project notebooks may intentionally retain saved results; the final cleanup removed only the largest raw HTML/table payloads. The unchanged originals remain available locally for comparison.
 
 ## Clone and CI findings
 
-The old checkout inside the projects dump failed on a historical filename containing a Windows-invalid colon. It was preserved untouched. A clean clone of current `main` succeeded at the top of `UEL_DS`, confirming that the repository history now checks out on Windows.
+The old checkout inside the projects dump failed on a historical filename containing a Windows-invalid colon. It was preserved untouched. A fresh clone of current `main` into a new Windows directory succeeded, confirming that the repository history now checks out on Windows.
 
-The screenshot's `AutoReg(..., old_names=False)` failure refers to an earlier revision. Current `main` no longer passes `old_names`, and the epidemiology test suite passes locally (`3 passed`). This branch also pins Ubuntu 24.04 and updates the checkout and Python setup actions to their current Node-24-based major versions, addressing the separate runner deprecation warning shown in the screenshot.
+The screenshot's `AutoReg(..., old_names=False)` failure refers to an earlier revision. Current `main` no longer passes `old_names`, and the epidemiology test suite passes locally (`3 passed`). The repository now pins Ubuntu 24.04 and uses the current Node-24-based major versions of the checkout and Python setup actions, addressing the separate runner deprecation warning shown in the screenshot.
