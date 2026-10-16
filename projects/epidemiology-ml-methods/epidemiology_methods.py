@@ -131,7 +131,7 @@ def autoreg_summary(df: pd.DataFrame) -> dict:
     train = series.iloc[:split]
     test = series.iloc[split:]
 
-    model = AutoReg(train, lags=4, old_names=False, trend="ct").fit()
+    model = AutoReg(train, lags=4, trend="ct").fit()
     forecast = model.predict(start=split, end=len(series) - 1, dynamic=False)
     mae = mean_absolute_error(test.to_numpy(), np.asarray(forecast))
     return {
