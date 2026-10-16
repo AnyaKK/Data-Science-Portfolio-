@@ -3,6 +3,11 @@ require("httr")
 
 library(httr)
 
+api_key <- Sys.getenv("OPENWEATHER_API_KEY")
+if (api_key == "") {
+    stop("Set OPENWEATHER_API_KEY before running this script.")
+}
+
 # Create some empty vectors to hold data temporarily
 
 # City name column
@@ -38,7 +43,7 @@ get_weather_forecaset_by_cities <- function(city_names){
         # Forecast API URL
         forecast_url <- 'https://api.openweathermap.org/data/2.5/forecast'
         # Create query parameters
-        forecast_query <- list(q = city_name, appid = "144e6de88af1c71bd61dca2269b055e5", units="metric")
+        forecast_query <- list(q = city_name, appid = api_key, units="metric")
         # Make HTTP GET call for the given city
         response_ <- GET(forecast_url, query=forecast_query)
         results <- content(response_, as="parsed")
