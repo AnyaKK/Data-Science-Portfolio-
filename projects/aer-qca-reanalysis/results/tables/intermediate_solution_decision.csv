@@ -1,0 +1,3 @@
+"model","decision","reason"
+"submitted row-mutation audit","reproduced for diagnosis only; not a valid intermediate solution","Rows 3 and 15 were overwritten by numeric position without documented directional expectations; row 3 was already sufficient."
+"corrected primary model","no intermediate solution reported","The supplied literature does not justify a complete directional-expectation vector or named easy counterfactuals for this model."

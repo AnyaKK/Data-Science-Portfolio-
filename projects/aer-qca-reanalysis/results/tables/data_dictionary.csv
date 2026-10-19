@@ -1,0 +1,8 @@
+"construct","raw_measure","data_level","main_cutoff","boundary_rule","analytical_status"
+"OUTCOME","af: presence of the course-defined A-level/A1 plan category","city","af == 1","coded binary","corrected outcome: plan presence, not stringency or implementation"
+"LARGE","Mean city population, 2013-2015","city","> 100000","strictly greater than","primary mandatory condition"
+"AFFLUENT","Mean city GDP per capita, 2013-2015","city","> 30000","strictly greater than","primary mandatory condition"
+"BENEFIT","City PM2.5 concentration","city","> 12.5","strictly greater than","primary external/co-benefit condition; requires theory in manuscript"
+"AUTONOMOUS","Country Local Autonomy Index mean, 2010 and 2014","country assigned to city","> 55","strictly greater than","primary institutional condition; not participatory governance"
+"SUPPORTED","Country national-climate-policy score mean, 2013-2015","country assigned to city","> 0.45","strictly greater than","primary national enabling context; not city-level CCPI"
+"ENERGY_CONSUMPTION","National final energy mean 2020-2022 allocated by city share of national population","country allocated to city by POP","> 8190 (sensitivity only)","strictly greater than","excluded from primary model; retained only as sensitivity because it is population-derived and temporally misaligned"

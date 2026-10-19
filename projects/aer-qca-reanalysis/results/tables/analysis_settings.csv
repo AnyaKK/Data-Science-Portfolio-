@@ -1,0 +1,5 @@
+"model_id","cases","conditions","truth_table_rows","observed_configurations","logical_remainders","sufficient_observed_configurations","contradictory_observed_below_cut","incl_cut","n_cut","pri_cut","calibration_rule","necessity_cut","show_cases","intermediate_solution"
+"submitted_six_condition_reconstruction",709,6,64,42,22,9,30,0.8,1,0,">",0.9,TRUE,"invalid row-mutation audit only"
+"corrected_primary_five_condition",726,5,32,30,2,6,23,0.8,1,0,">",0.9,TRUE,"not reported"
+"corrected_energy_sensitivity_threshold_8190",726,6,64,43,21,8,32,0.8,1,0,">",0.9,TRUE,"not reported"
+"corrected_energy_sensitivity_median_threshold",726,6,64,49,15,14,30,0.8,1,0,">",0.9,TRUE,"not reported"

@@ -1,0 +1,23 @@
+lineage_id,branch,reported_result,logical_source_role,transformation_or_test,public_output,status
+P01,shared provenance,Selected input identities and SHA-256 hashes,Twelve logical source roles,Hash exact source bytes and redact local paths,results/tables/selected_input_hashes.csv,new audit control
+P02,shared preparation,One row per source city,main + lai + population,Assert unique corrected keys and record unmatched matches,results/tables/join_audit.csv,corrected upstream
+P03,corrected primary,LARGE membership,population,Available-year city mean then strict cutoff >100000,results/tables/threshold_diagnostics.csv,retained with sensitivity
+P04,corrected primary,AFFLUENT membership,main,Available-year GDP-per-capita mean then strict cutoff >30000,results/tables/threshold_diagnostics.csv,retained with sensitivity
+P05,corrected primary,BENEFIT membership,main,City PM2.5 then strict cutoff >12.5,results/tables/threshold_diagnostics.csv,retained with bounded co-benefit interpretation
+P06,corrected primary,AUTONOMOUS membership,lai,Available-year country LAI mean then strict cutoff >55,results/tables/threshold_diagnostics.csv,retained as local-autonomy construct
+P07,corrected primary,SUPPORTED membership,main,Available-year national-policy mean then strict cutoff >0.45,results/tables/threshold_diagnostics.csv,retained as national context
+P08,corrected primary,OUTCOME membership,main,Convert supplied plan-category presence field to binary outcome,results/tables/set_balance.csv,corrected construct label
+P09,submitted reconstruction,709-row six-condition CDM,submitted_city + submitted_cdm,Apply submitted cutoffs and compare membership matrix exactly,results/tables/submitted_model_comparison.csv,exactly reproduced
+P10,submitted reconstruction,Energy necessity consistency below 0.90,submitted reconstructed CDM,Test every condition and negation for necessity,results/tables/model_comparison.csv,reproduced but not necessary
+P11,submitted reconstruction,64-row truth table with 22 remainders,submitted reconstructed CDM,Construct complete truth table at inclusion 0.80 and frequency 1,results/tables/truth_table_submitted_complete.csv,regenerated completely
+P12,submitted reconstruction,Eight-path complex solution,submitted truth table,Boolean minimization without logical remainders,results/tables/solutions_and_fit.csv,reproduced and labelled
+P13,submitted reconstruction,Two parsimonious alternatives,submitted truth table,Boolean minimization permitting logical remainders,results/tables/logical_remainders_used.csv,reproduced and labelled
+P14,submitted row-mutation audit,Alleged intermediate solution,submitted truth table,Record and diagnose positional OUT overwrites without validating them,results/tables/submitted_row_mutation_audit.csv,invalid procedure
+P15,corrected energy sensitivity,Population-allocated proxy diagnostics,energy + national_raw + city population,Unique-key join and frozen-period population allocation,results/tables/energy_proxy_diagnostics.csv,sensitivity only
+P16,corrected primary,726 complete cases,corrected five-condition city matrix,Transparent complete-case rule after corrected joins,results/tables/case_flow.csv,replaces submitted case base
+P17,corrected primary,No individually necessary literal,corrected CDM,Necessity consistency benchmark 0.90,results/tables/necessity.csv,replaces necessity claims
+P18,corrected primary,No individually sufficient literal at 0.80,corrected CDM,Individual sufficiency diagnostic,results/tables/individual_sufficiency.csv,replaces metric interpretations
+P19,corrected primary,32-row truth table with two remainders,corrected CDM,Complete five-condition truth table,results/tables/truth_table_complete.csv,new primary table
+P20,corrected primary,Five-path solution with consistency 0.8701 and coverage 0.4012,corrected truth table,Complex and parsimonious Boolean minimization plus explicit fit,results/tables/solutions_and_fit.csv,new primary result
+P21,corrected primary,No intermediate solution,methodological evidence,Require directional expectations and named easy counterfactuals,results/tables/intermediate_solution_decision.csv,transparent omission
+P22,robustness,Threshold and calibration sensitivities,corrected city data,Rerun complete QCA for every predeclared variant,results/tables/sensitivity_comparison.csv,new robustness evidence

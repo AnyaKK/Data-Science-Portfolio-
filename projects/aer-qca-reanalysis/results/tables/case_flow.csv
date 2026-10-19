@@ -1,0 +1,8 @@
+"branch","stage","records","explanation"
+"corrected","main city records imported",885,"One row per city_code in main_dataset.csv"
+"corrected","after one-to-one/many-to-one joins",885,"Joins preserve main rows; unmatched data remain missing and are audited"
+"corrected","complete five-condition cases",726,"No missing values in five conditions or OUTCOME"
+"corrected","excluded from five-condition complete-case model",159,"One row per excluded city with missing fields is saved privately"
+"submitted","saved city-energy records after erroneous join",894,"Nine extra Finnish rows result from two Finland national-population records"
+"submitted","complete submitted six-condition cases",709,"Notebook thresholds and complete-case rule reproduced"
+"submitted","excluded from submitted complete-case model",185,"One row per excluded submitted record with missing fields is saved privately"

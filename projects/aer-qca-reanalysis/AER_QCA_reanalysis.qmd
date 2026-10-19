@@ -1,0 +1,554 @@
+---
+title: "AER QCA Reanalysis"
+subtitle: "Submitted-model reconstruction, corrected crisp-set model, and manuscript reconciliation"
+date: last-modified
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    code-fold: false
+    code-tools: true
+    embed-resources: true
+    df-print: paged
+execute:
+  echo: true
+  warning: true
+  message: false
+  error: false
+params:
+  source_root: null
+  output_dir: "analysis_outputs"
+---
+
+```{r}
+#| label: setup-and-run
+#| include: true
+
+# This chunk is intentionally visible. It resolves configuration, loads the
+# documented functions, and reruns every table in this report from source.
+
+# `portfolio_mode` is FALSE for the private audit and TRUE for the public copy.
+# The public mode suppresses case-level files and private manuscript material.
+portfolio_mode <- tolower(Sys.getenv("AER_PORTFOLIO_MODE", "false")) %in%
+  c("1", "true", "yes")
+
+# A parameter takes precedence when supplied at render time. Otherwise the
+# workflow reads AER_SOURCE_ROOT. No machine-specific setwd() is used.
+source_root <- params$source_root
+if (is.null(source_root) || !nzchar(source_root)) {
+  source_root <- Sys.getenv("AER_SOURCE_ROOT", unset = "")
+}
+if (!nzchar(source_root)) {
+  stop(
+    "Set the Quarto parameter source_root or the AER_SOURCE_ROOT environment variable ",
+    "to the authorized AER source directory.",
+    call. = FALSE
+  )
+}
+
+# The output location can be redirected for the portfolio render. Relative
+# paths are resolved from the project root by Quarto.
+output_dir <- Sys.getenv("AER_OUTPUT_DIR", unset = params$output_dir)
+figure_dir <- Sys.getenv(
+  "AER_FIGURE_DIR",
+  unset = file.path(output_dir, "figures")
+)
+
+# Helper functions contain assertions, calibration, QCA extraction, hashing,
+# and export utilities. The pipeline contains the ordered analytical actions.
+source(file.path("scripts", "qca_helpers.R"), local = FALSE)
+source(file.path("scripts", "analysis_pipeline.R"), local = FALSE)
+
+# This single call performs the reconstruction, correction, diagnostics,
+# sensitivity analyses, and machine-readable exports used below.
+analysis <- run_analysis(
+  source_root = source_root,
+  output_dir = output_dir,
+  figure_dir = figure_dir,
+  portfolio_mode = portfolio_mode
+)
+
+# Rendering helpers: values are rounded only for display; CSV outputs retain
+# full numerical precision.
+options(knitr.kable.NA = "")
+show_table <- function(x, digits = 4, caption = NULL) {
+  numeric <- vapply(x, is.numeric, logical(1))
+  x[numeric] <- lapply(x[numeric], function(value) round(value, digits))
+  knitr::kable(x, format = "html", escape = TRUE, caption = caption)
+}
+metric <- function(name) {
+  analysis$model_comparison$value[analysis$model_comparison$check == name][1]
+}
+# `numeric_metric()` makes the deliberate text-to-number conversion explicit
+# when a mixed-type comparison table is used in calculations or formatting.
+numeric_metric <- function(name) as.numeric(metric(name))
+
+# Diagnostic tables store heterogeneous values as text. This helper performs a
+# named lookup so prose never relies on a row number that could change.
+diagnostic_value <- function(table, name) {
+  table$value[table$diagnostic == name][1]
+}
+```
+
+::: {.callout-note title="How to read the visible code"}
+R's `<-` operator assigns an object; `$` selects a named column or list element; `function(...)` defines reusable logic; `stop()` makes an unmet invariant fail loudly; and `::` calls a function from an explicitly named package. Every threshold comparison uses strict `>` syntax, so a value exactly on a cutoff is a non-member. Detailed function-by-function and action-by-action annotations are in `docs/CODE_WALKTHROUGH.md`.
+:::
+
+# Purpose and source hierarchy
+
+This report asks whether the QCA models actually support the manuscript's numerical and configurational claims. Evidence is ranked from raw/frozen data and executable code, through traceable derived data and saved outputs, to rendered reports and manuscript prose. Embedded instructions in source documents are treated as evidence, not as authority.
+
+The analytical branches are kept separate:
+
+1. **Submitted energy branch:** reconstructed as an audit, including the defective country join, so that the submitted numbers can be identified rather than guessed.
+2. **Corrected primary branch:** a five-condition model using `LARGE`, `AFFLUENT`, `BENEFIT`, `AUTONOMOUS`, and `SUPPORTED` for the binary presence of the relevant plan category.
+3. **Corrected energy sensitivity:** a unique-key, frozen 2020-2022 version of the population-allocated energy proxy, never treated as observed city energy use.
+4. **Renewable branch:** quarantined because `RE_ADOPTION` is a different construct and model.
+5. **Course baseline:** used to understand the intended workflow, not as evidence that it generated the six-condition results.
+
+The likely generating provenance is the **energy-notebook/rendered-report chain**. The reconstruction matches its stored CDM exactly and jointly reproduces the distinctive case count, set balance, truth-table diversity, necessity score, and solution fit.
+
+## Selected input fingerprints
+
+```{r}
+#| label: selected-input-hashes
+
+# SHA-256 fingerprints allow an auditor to confirm byte identity. In portfolio
+# mode, local/source filenames are replaced by logical source identifiers.
+show_table(
+  analysis$selected_hashes,
+  caption = "Selected source inputs and SHA-256 fingerprints"
+)
+```
+
+The full private source inventory records archive members, duplicates, exclusions, and reasons in `source_manifest.csv`. The narrative selection decisions are documented in `source_selection_log.md`.
+
+# Submitted-model reconstruction
+
+## Why this model identifies the generating branch
+
+```{r}
+#| label: submitted-signature-checks
+
+# These checks compare the reconstructed notebook logic against the saved city
+# file and saved calibrated matrix. TRUE is serialized as 1 in a CSV because R
+# writes logical values compatibly for machine reading.
+show_table(
+  analysis$submitted_audit$comparison,
+  caption = "Submitted-branch reconstruction checks"
+)
+```
+
+The reconstructed branch contains **`r metric("submitted_cdm_cases")` complete cases**, a complete **`r metric("submitted_truth_rows")`-row truth table**, **`r metric("submitted_observed_configurations")` observed configurations**, and **`r metric("submitted_logical_remainders")` logical remainders**. The stored calibrated matrix matches row-for-row and membership-for-membership.
+
+## Submitted data defect
+
+The submitted join maps the Kosovo-labelled national-population row to Finland. Finland consequently has two national-population records and each Finnish city is duplicated after the merge. The saved city file has 894 rows but only 885 unique city codes. The reconstruction preserves this only inside the submitted-error branch, confirms nine added rows, and then fixes the key upstream for the corrected analysis.
+
+The saved filtered population file also leaves the supplied `Cypruss` spelling unmatched, which explains the submitted Cyprus missing value. The audit reproduces that detail; the corrected model uses the unique raw country table.
+
+## Submitted necessity and individual sufficiency
+
+```{r}
+#| label: submitted-necessity
+
+# `literal_fit_tables()` evaluates every condition and its negation. The table
+# below is generated directly from the submitted reconstructed CDM.
+submitted_necessity <- analysis$submitted$necessity
+show_table(
+  submitted_necessity,
+  caption = "Submitted-model necessity: conditions and negations"
+)
+```
+
+The submitted value for `ENERGY_CONSUMPTION` is reproduced at **`r round(as.numeric(metric("submitted_energy_necessity_consistency")), 4)` consistency**. It is below the declared 0.90 criterion, so it is **not necessary**. Its coverage is a different metric and cannot rescue the necessity claim.
+
+```{r}
+#| label: submitted-individual-sufficiency
+
+# This is the companion to the necessity table. It shows whether any literal
+# alone clears sufficiency, before configurations are minimized.
+show_table(
+  analysis$submitted$individual_sufficiency,
+  caption = "Submitted-model individual sufficiency: conditions and negations"
+)
+```
+
+## Complete submitted truth table
+
+```{r}
+#| label: submitted-complete-truth-table
+
+# The private audit retains case identifiers for every observed row. The
+# portfolio render removes that case-level column while preserving all 64
+# Boolean configurations and aggregate fit diagnostics.
+submitted_truth_display <- analysis$submitted$truth_table
+if (portfolio_mode) submitted_truth_display$cases <- NULL
+stopifnot(nrow(submitted_truth_display) == 64L)
+show_table(
+  submitted_truth_display,
+  caption = "All 64 configurations in the reconstructed six-condition truth table"
+)
+```
+
+The main submitted reconstruction uses `incl.cut = 0.80`, `n.cut = 1`, `PRI cut = 0`, and displays cases. The complete export replaces the effectively empty saved truth-table CSV.
+
+## Submitted complex and parsimonious solutions
+
+```{r}
+#| label: submitted-solutions
+
+submitted_solution_rows <- subset(
+  analysis$solutions,
+  model_id == "submitted_six_condition_reconstruction"
+)
+# Create named subsets once so the following prose is generated from the live
+# solution object rather than copied from an earlier run.
+submitted_complex_paths <- subset(
+  submitted_solution_rows,
+  solution_type == "complex" & row_type == "path"
+)
+submitted_complex_overall <- subset(
+  submitted_solution_rows,
+  solution_type == "complex" & row_type == "overall_solution"
+)
+submitted_parsimonious_models <- unique(subset(
+  submitted_solution_rows,
+  solution_type == "parsimonious"
+)$model_number)
+show_table(
+  submitted_solution_rows,
+  caption = "Labelled solutions and path/overall fit for the submitted reconstruction"
+)
+```
+
+The complex solution has **`r nrow(submitted_complex_paths)` paths**, overall consistency **`r round(submitted_complex_overall$consistency[1], 4)`**, and coverage **`r round(submitted_complex_overall$raw_coverage[1], 4)`**. The parsimonious minimization has **`r length(submitted_parsimonious_models)` alternative models**. This is why every formula must be labelled by solution type and model number.
+
+## Why the alleged intermediate solution is invalid
+
+```{r}
+#| label: submitted-row-mutation
+
+# This is a forensic reproduction only. The code records the original OUT
+# value before applying the same positional mutation found in the notebook.
+show_table(
+  analysis$alleged_intermediate$row_audit,
+  caption = "Audit of hard-coded truth-table rows 3 and 15"
+)
+show_table(
+  analysis$intermediate_decision,
+  caption = "Intermediate-solution decisions"
+)
+```
+
+Row 3 was already sufficient; row 15 was an unobserved configuration. Numeric positions have no portable theoretical meaning. No directional-expectation vector, named easy counterfactual, or source-specific argument supports this change. The result is retained solely to diagnose the manuscript, never as a valid intermediate solution.
+
+# Data-quality and join audit
+
+## Case flow
+
+```{r}
+#| label: case-flow
+
+# Counts are recorded after every consequential import, join, and complete-case
+# decision. Private exclusion files specify the missing field for every dropped
+# record; those case-level files are omitted from the portfolio.
+show_table(analysis$case_flow, caption = "Case flow by analytical branch")
+```
+
+The corrected joins enforce unique `city_code`, city-name, and country keys before matching. `match()` is used instead of an unconstrained many-to-many merge so the 885-row city base cannot silently expand. Missing matches remain missing and are audited before complete-case selection.
+
+## Variable and level dictionary
+
+```{r}
+#| label: data-dictionary
+
+# This table is produced inside `run_analysis()` from the exact variables used
+# in the model; it records construct, data level, cutoff, and interpretation.
+show_table(
+  analysis$data_dictionary,
+  caption = "Construct definitions, levels, calibration rules, and analytical status"
+)
+```
+
+Two level corrections are essential: `SUPPORTED` is national context assigned to city cases, and `AUTONOMOUS` is institutional/local autonomy rather than participatory governance. The outcome is plan-category presence, not stringency, implementation, effectiveness, or emissions reduction.
+
+# Corrected analytical dataset and calibration
+
+## Primary-model decision
+
+The corrected primary model omits the energy proxy because it is produced by multiplying a national total by city population divided by national population. This construction is mechanically related to `POP`, temporally later than the other variables, and not an observation of city energy use. The measure remains visible in sensitivity analyses so this decision is auditable rather than silent.
+
+## Calibration syntax and boundary rules
+
+```{r}
+#| label: calibration-diagnostics
+
+# For a crisp set, `as.integer(raw > cutoff)` converts TRUE to 1 and FALSE to
+# 0. `crisp_above()` additionally preserves missing raw values as NA. Exact
+# boundary counts show the practical consequence of choosing `>` rather than
+# `>=`.
+show_table(
+  analysis$threshold_diagnostics,
+  caption = "Raw summaries, strict cutoffs, boundary cases, and set balance"
+)
+```
+
+The main cutoffs are course-design choices, not thresholds imported from unrelated studies. Each is varied in the sensitivity analysis. Calibration occurs before truth-table construction; Boolean minimization is not a calibration method.
+
+## Set balance
+
+```{r}
+#| label: set-balance-table
+
+# Member/non-member counts come directly from the corrected complete-case CDM
+# and expose calibrations that would make a set empirically trivial.
+show_table(analysis$set_balance, caption = "Corrected model set memberships")
+```
+
+```{r}
+#| label: set-balance-figure
+#| echo: false
+
+# This figure is generated by base R from the same set_balance object exported
+# above; no values are manually entered.
+knitr::include_graphics(analysis$files$set_balance_figure)
+```
+
+## Pairwise condition associations
+
+```{r}
+#| label: condition-associations
+
+# For binary crisp sets, Pearson correlation is the phi coefficient. It is a
+# redundancy diagnostic, not a causal-effect estimate.
+show_table(
+  analysis$associations,
+  caption = "Pairwise phi correlations among corrected primary conditions"
+)
+```
+
+## Energy-proxy diagnostics
+
+```{r}
+#| label: energy-proxy-diagnostics
+
+# These diagnostics quantify both the proxy's construction and its empirical
+# dependence on population; they justify sensitivity-only status.
+show_table(
+  analysis$energy_proxy_diagnostics,
+  caption = "Why the energy measure is retained only as a sensitivity"
+)
+```
+
+The corrected 2020-2022 proxy correlates approximately **`r round(as.numeric(diagnostic_value(analysis$energy_proxy_diagnostics, "pearson_correlation_proxy_with_POP")), 4)`** with city population. At 8,190, **`r round(100 * as.numeric(diagnostic_value(analysis$energy_proxy_diagnostics, "membership_share_at_8190")), 2)`%** of complete cases are members; a median cutoff balances membership but cannot repair the construct or temporal problem.
+
+# Necessity and individual sufficiency
+
+## Corrected necessity
+
+```{r}
+#| label: corrected-necessity
+
+# The table tests all five positive conditions and all five negations against
+# the declared 0.90 necessity criterion.
+show_table(
+  analysis$corrected$necessity,
+  caption = "Corrected primary model: necessity for every condition and negation"
+)
+```
+
+No condition or negation reaches 0.90 consistency. Necessity consistency, necessity coverage, and relevance of necessity are reported separately.
+
+## Corrected individual sufficiency
+
+```{r}
+#| label: corrected-individual-sufficiency
+
+# Individual-literal fit is shown separately from configurational fit so a
+# reader cannot mistake one condition for a minimized causal path.
+show_table(
+  analysis$corrected$individual_sufficiency,
+  caption = "Corrected primary model: individual sufficiency for every condition and negation"
+)
+```
+
+No individual literal reaches the main 0.80 sufficiency threshold. This does not preclude configurations from being sufficient; it motivates the truth-table analysis.
+
+# Complete corrected truth table
+
+```{r}
+#| label: corrected-complete-truth-table
+
+corrected_truth_display <- analysis$corrected$truth_table
+if (portfolio_mode) corrected_truth_display$cases <- NULL
+stopifnot(nrow(corrected_truth_display) == 32L)
+# A complete table is required even when most rows are observed. The assertion
+# makes accidental truncation a render-stopping error.
+show_table(
+  corrected_truth_display,
+  caption = "All 32 configurations in the corrected five-condition truth table"
+)
+```
+
+The corrected table has **`r analysis$corrected$settings$observed_configurations` observed configurations**, **`r analysis$corrected$settings$logical_remainders` logical remainders**, and **`r analysis$corrected$settings$sufficient_observed_configurations` observed rows** meeting an inclusion cutoff of **`r analysis$corrected$settings$incl_cut`**. Every configuration is exported; no console truncation is used.
+
+# Complex and parsimonious solutions
+
+```{r}
+#| label: corrected-solutions
+
+corrected_solution_rows <- subset(
+  analysis$solutions,
+  model_id == "corrected_primary_five_condition"
+)
+# Keep the complex path and overall rows as named objects for dynamic narrative
+# values and path labels below.
+corrected_complex_paths <- subset(
+  corrected_solution_rows,
+  solution_type == "complex" & row_type == "path"
+)
+corrected_complex_overall <- subset(
+  corrected_solution_rows,
+  solution_type == "complex" & row_type == "overall_solution"
+)
+corrected_parsimonious_overall <- subset(
+  corrected_solution_rows,
+  solution_type == "parsimonious" & row_type == "overall_solution"
+)
+stopifnot(nrow(corrected_complex_paths) == 5L)
+show_table(
+  corrected_solution_rows,
+  caption = "Corrected complex and parsimonious solutions with path and overall fit"
+)
+```
+
+The corrected complex and parsimonious solutions are identical: **`r nrow(corrected_complex_paths)` paths**, overall consistency **`r round(corrected_complex_overall$consistency[1], 4)`**, PRI **`r round(corrected_complex_overall$PRI[1], 4)`**, and coverage **`r round(corrected_complex_overall$raw_coverage[1], 4)`**. Because the **`r analysis$corrected$settings$logical_remainders` remainders** do not simplify the formula, no simplifying assumption is used in the corrected parsimonious result. The complex solution is preferred for substantive reporting because it rests only on observed sufficient configurations, although the identical parsimonious formula makes the choice immaterial here.
+
+The five paths are:
+
+1. `` `r corrected_complex_paths$expression[1]` ``
+2. `` `r corrected_complex_paths$expression[2]` ``
+3. `` `r corrected_complex_paths$expression[3]` ``
+4. `` `r corrected_complex_paths$expression[4]` ``
+5. `` `r corrected_complex_paths$expression[5]` ``
+
+These formulas support only claims about the calibrated sets. They do not independently reveal political commitment, stakeholder participation, implementation, leadership, or other unmeasured mechanisms.
+
+## Logical remainders actually used
+
+```{r}
+#| label: simplifying-assumptions
+
+# QCA's parsimonious models may use logical remainders. Displaying the exact
+# configurations makes every simplifying counterfactual inspectable.
+if (nrow(analysis$simplifying_assumptions)) {
+  show_table(
+    analysis$simplifying_assumptions,
+    caption = "Simplifying assumptions used in parsimonious sensitivity/reconstruction models"
+  )
+} else {
+  cat("No simplifying assumption was used by any retained model.\n")
+}
+```
+
+No corrected intermediate solution is reported. That omission is a methodological decision, not a missing computation.
+
+# Path cases and fit statistics
+
+`analysis_outputs/cases_by_path.csv` records every private working-case membership for the submitted reconstruction, invalid row-mutation audit, corrected primary model, and energy sensitivities. Each record includes solution type, model number, path expression, stable case ID, outcome, and whether the case is a consistent path member or a deviant-consistency case. It is intentionally not copied to the public portfolio because redistribution rights for case-level data are unclear.
+
+The `member_cases`, `outcome_member_cases`, and `deviant_consistency_cases` columns in the solution table are calculated from Boolean path membership, not by text matching. This corrects the manuscript's unsupported totals of 353 and 347 for the first two paths; the submitted reconstruction yields **`r submitted_complex_paths$member_cases[1]` and `r submitted_complex_paths$member_cases[2]` path members**, and the corrected model yields **`r corrected_complex_paths$member_cases[1]` and `r corrected_complex_paths$member_cases[2]`**.
+
+# Robustness and sensitivity checks
+
+```{r}
+#| label: sensitivity-comparison
+
+# Each row comes from a full recalibration, truth-table construction, and
+# minimization. `path_jaccard_with_main` equals the number of shared complex
+# paths divided by the number in the union of both path sets.
+show_table(
+  analysis$sensitivity,
+  caption = "Calibration, threshold, frequency, energy, and join sensitivities"
+)
+```
+
+The 0.75 versus 0.80 inclusion threshold and `n.cut = 2` checks leave the corrected five-path formula unchanged. Several calibration changes alter paths, particularly the population, PM2.5, and LAI alternatives, so interpretation should emphasize the two broad high-capacity paths and avoid treating every small-coverage term as a universal mechanism. Correcting the duplicate-country join and restricting energy to 2020-2022 do not solve the proxy's redundancy or imbalance.
+
+# Literature-evidence table
+
+```{r}
+#| label: literature-evidence
+
+literature_path <- "literature_evidence.csv"
+if (!file.exists(literature_path)) {
+  stop("Missing literature_evidence.csv", call. = FALSE)
+}
+# This hand-audited evidence table links a narrow methodological/construct claim
+# to a supplied source locator; it does not import thresholds or model results.
+literature_evidence <- utils::read.csv(
+  literature_path,
+  stringsAsFactors = FALSE,
+  check.names = FALSE
+)
+show_table(
+  literature_evidence,
+  caption = "Evidence used to correct construct and QCA-method claims"
+)
+```
+
+No external study's thresholds, truth-table row positions, or directional expectations are imported into this model.
+
+# Model-to-manuscript crosswalk
+
+```{r}
+#| label: manuscript-crosswalk
+
+crosswalk_path <- "model_manuscript_crosswalk.csv"
+if (!portfolio_mode && file.exists(crosswalk_path)) {
+  # The claim-level crosswalk contains private manuscript locators and remains
+  # visible only in the full audit render.
+  manuscript_crosswalk <- utils::read.csv(
+    crosswalk_path,
+    stringsAsFactors = FALSE,
+    check.names = FALSE
+  )
+  show_table(
+    manuscript_crosswalk,
+    caption = "Private claim-by-claim manuscript correction crosswalk"
+  )
+} else {
+  cat(
+    "The private manuscript crosswalk is intentionally omitted from the public portfolio render. ",
+    "Aggregate corrected results remain available in the preceding sections.\n"
+  )
+}
+```
+
+The crosswalk distinguishes five statuses: reproduced, reproduced only under the submitted error, not reproduced, methodologically unsupported, and supported after rewording. Replacement text is deliberately narrow; it corrects affected methods, results, and discussion claims without inventing new case mechanisms.
+
+# Conclusions for the manuscript
+
+1. The energy notebook/rendered-report branch generated the submitted six-condition numerical pattern; the generic course script did not.
+2. The submitted model is reproducible only when the duplicate Finland join, temporally late population-allocated energy proxy, and extreme energy-set imbalance are retained.
+3. `ENERGY_CONSUMPTION` is not necessary at a 0.90 threshold, even in the submitted-error model.
+4. The corrected primary analysis uses `r metric("corrected_primary_cases")` complete city cases and five conditions. It produces a complete `r metric("corrected_truth_rows")`-row truth table, `r metric("corrected_complex_paths")` complex paths, `r round(numeric_metric("corrected_complex_solution_consistency"), 4)` solution consistency, and `r round(numeric_metric("corrected_complex_solution_coverage"), 4)` coverage.
+5. No individual condition or negation is necessary; no individual literal reaches 0.80 sufficiency.
+6. The corrected complex and parsimonious formulas are identical. No intermediate solution is reported because theory-backed directional expectations and named easy counterfactuals are unavailable.
+7. All manuscript references to stringency, implementation, effectiveness, statistical moderation, participatory governance, or unmeasured case mechanisms must be removed or reframed.
+
+# Generated outputs
+
+The pipeline writes full-precision CSV files rather than copying rounded HTML tables. Private mode includes calibrated case data, exclusions, and cases by path. Portfolio mode writes only aggregate/public-safe outputs. The source/output mapping is documented in `analysis_lineage.csv`, and the copy decision for every portfolio artifact is recorded in `portfolio_copy_manifest.csv`.
+
+# Session information
+
+```{r}
+#| label: session-information
+
+# `sessionInfo()` records the interpreter, platform, locale, attached packages,
+# and loaded namespaces needed to diagnose reproducibility differences.
+sessionInfo()
+```

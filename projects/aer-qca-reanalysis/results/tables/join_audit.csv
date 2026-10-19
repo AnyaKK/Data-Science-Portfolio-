@@ -1,0 +1,9 @@
+"check","value"
+"main_rows",885
+"unique_main_city_codes",885
+"population_rows",879
+"unique_population_city_names",879
+"lai_rows",39
+"unique_lai_countries_after_normalization",39
+"unmatched_main_countries_to_lai",0
+"unmatched_main_cities_to_population",133

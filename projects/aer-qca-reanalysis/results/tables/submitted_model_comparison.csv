@@ -1,0 +1,12 @@
+"check","value"
+"saved_precalibration_rows",894
+"rebuilt_precalibration_rows",894
+"unique_saved_city_codes",885
+"extra_rows_from_nonunique_national_population_join",9
+"duplicated_city_codes",9
+"submitted_complete_case_rows",709
+"stored_cdm_rows",709
+"stored_cdm_exact_membership_match",1
+"rebuilt_city_proxy_signature_match",1
+"energy_set_members",606
+"energy_set_member_share",0.854724964739069

@@ -2,7 +2,7 @@
 
 ## About
 
-This public portfolio brings together 11 documented project folders, 66 R/Python learning notebooks and a standalone R visualisation script completed or adapted during data-science study. It demonstrates data collection, wrangling, visualisation, statistical analysis, machine learning, spatial analysis and reproducible workflows, with selected SQL, Excel, Power BI and Bash work. Each project folder explains its question, evidence, methods, data and reproducibility limits.
+This public portfolio brings together 12 documented project folders, 66 R/Python learning notebooks and a standalone R visualisation script completed or adapted during data-science study. It demonstrates data collection, wrangling, visualisation, statistical analysis, machine learning, spatial analysis and reproducible workflows, with selected SQL, Excel, Power BI and Bash work. Each project folder explains its question, evidence, methods, data and reproducibility limits.
 
 Many notebooks began as IBM Skills Network or Coursera labs and peer-graded assignments. Their original attribution and course material remain in the notebooks. The summaries below describe the work that is present in this repository; they do not claim results beyond the saved files.
 
@@ -23,6 +23,7 @@ The public repository is a curated, privacy-aware selection from a larger local 
 | [Starbucks offer-response analysis](projects/starbucks-offer-analysis/) | Event reconstruction, feature engineering, exploratory analysis and a logistic-regression pipeline on simulated rewards data | Python, pandas, scikit-learn |
 | [Loan-repayment classification assessment](projects/loan-classification-assessment/) | KNN, decision-tree, SVM and logistic-regression comparison with classification metrics | Python, pandas, scikit-learn |
 | [Spatial digital-infrastructure analysis](projects/spatial-infrastructure-r/) | Audited local-authority joins, spatial mapping, OLS diagnostics and decision-support outputs | R, Quarto, sf, tidyverse |
+| [Urban climate-plan QCA reanalysis](projects/aer-qca-reanalysis/) | Reproducible crisp-set QCA reconstruction, key and join audits, complete truth-table minimisation, necessity/sufficiency assessment and sensitivity analysis | R, Quarto, QCA |
 
 ## Learning exercises
 
@@ -59,7 +60,8 @@ The public repository is a curated, privacy-aware selection from a larger local 
 │   ├── heart-disease-feature-selection/
 │   ├── starbucks-offer-analysis/
 │   ├── loan-classification-assessment/
-│   └── spatial-infrastructure-r/
+│   ├── spatial-infrastructure-r/
+│   └── aer-qca-reanalysis/
 └── exercises/
     ├── python-foundations/
     ├── python-data-analysis/
