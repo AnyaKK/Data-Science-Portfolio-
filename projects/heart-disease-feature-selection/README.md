@@ -16,6 +16,8 @@ Neither selector consistently improved discrimination across classifiers. Smalle
 
 [Heart_Disease_GA_PSO_Analysis_Workflow_v3_Monitored-IR.ipynb](electronic_records/Heart_Disease_GA_PSO_Analysis_Workflow_v3_Monitored-IR.ipynb) is an unchanged copy of the supplied reviewed notebook, including saved outputs and personal details, provided at the author's explicit request for grading. Its SHA-256 is recorded in the [export-copy manifest](electronic_records/SHA256_MANIFEST.json). No notebook cells, personal details or outputs were removed or redacted for this copy. The `IR` filename does not establish human independent review or prove leakage impossible; the saved review fields and qualifications remain as recorded.
 
+The [dissertation Appendices A–H](docs/04_Appendices.docx) contain the evidence tables, figures and GitHub links. The linked files use the main branch; verify their bytes against the export-copy manifest if the repository changes.
+
 ## Repository structure
 
 ```text
@@ -31,6 +33,7 @@ heart-disease-feature-selection/
 │   └── ...                          # Tables, predictions, masks, run/configuration records
 ├── results/                         # Existing convenient table copies refreshed from v3
 ├── docs/
+│   ├── 04_Appendices.docx
 │   ├── PROJECT_NOTE.md
 │   └── PUBLICATION_CHANGELOG.md
 └── scripts/verify_records.py         # File-identity checks only; no fitting
