@@ -1,0 +1,5 @@
+
+
+# Preserve exact dissertation evidence bytes and saved table copies.
+projects/heart-disease-feature-selection/electronic_records/** -text
+projects/heart-disease-feature-selection/results/*.csv -text

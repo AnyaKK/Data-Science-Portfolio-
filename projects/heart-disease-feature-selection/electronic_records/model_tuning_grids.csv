@@ -1,0 +1,12 @@
+classifier,parameter,values
+LR,model__C,"[0.1, 1.0, 10.0]"
+DT,model__max_depth,"[None, 3, 5]"
+DT,model__min_samples_leaf,"[1, 5, 10]"
+RF,model__n_estimators,"[150, 300]"
+RF,model__max_depth,"[None, 5]"
+RF,model__min_samples_leaf,"[1, 5]"
+SVM,model__C,"[0.1, 1.0, 10.0]"
+SVM,model__gamma,"['scale', 0.01, 0.1]"
+XGB,model__n_estimators,"[100, 200]"
+XGB,model__max_depth,"[2, 3]"
+XGB,model__learning_rate,"[0.03, 0.1]"

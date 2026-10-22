@@ -1,0 +1,157 @@
+{
+  "scope": "Export copies for dissertation appendices; separate from the original analytical run manifest. The reviewed notebook was added after that run.",
+  "files": {
+    "aggregated_oof_performance.csv": {
+      "sha256": "f09304dcad5bf573b8c0f91c871543d507049fb947210b7806f1e8d994fa80cd",
+      "bytes": 3332
+    },
+    "aggregated_oof_predictions.csv": {
+      "sha256": "45ee356f4b7ea5a9efc526456e2454d03d11fb2df89e9e45995c981c6fee0770",
+      "bytes": 165077
+    },
+    "all_optimiser_runs.json": {
+      "sha256": "15e8c894ce9b3805a2d8d6a2486b53fbc2cfdcad50aedd1f9c7101f9f4731970",
+      "bytes": 334076
+    },
+    "all_outer_predictions.csv": {
+      "sha256": "1db2abf17903fd4ba7ba8c115a2ef175dd9a0f66df2760f339c326d6a44be885",
+      "bytes": 803102
+    },
+    "analysis_estimands.json": {
+      "sha256": "33968df1fbc62813c0ad9fb6929fa46d20d5d23665a03eaf81be995d30a9fa9f",
+      "bytes": 641
+    },
+    "calibration_results.csv": {
+      "sha256": "5d93a0a8dfdb06efa9b7bbe9fbf1143a36d937fd3a6dfb8088e20f6b5877cd17",
+      "bytes": 1247
+    },
+    "configuration.json": {
+      "sha256": "988daf551bab78937c97d56f42467f8eebe5eb981392a7fe5d6568ab46d92ba8",
+      "bytes": 931
+    },
+    "cross_classifier_consensus.csv": {
+      "sha256": "52076d1b529fd87b370c8d713fe5ca4b75f15890f8ea932fbb9be4c58f3f127f",
+      "bytes": 727
+    },
+    "data_provenance.json": {
+      "sha256": "dcd96b1786053d02f3d6c906e1b930a36bcfedb6c172e6daf71bf00e702d627b",
+      "bytes": 1170
+    },
+    "dataset_categorical_frequencies.csv": {
+      "sha256": "e7f549ce87b6099138c34c6274437622cbfe17d92a254174447f8d29014ba29f",
+      "bytes": 336
+    },
+    "dataset_class_distribution.csv": {
+      "sha256": "332a682a9668ea828c0dd5248a29fb6815b12953f9fc9602f64fdc19cd48a620",
+      "bytes": 48
+    },
+    "dataset_missingness.csv": {
+      "sha256": "012234816cebefcfb33e6286f63017cb0ddde95e582098f9c5b206577de9fd6d",
+      "bytes": 229
+    },
+    "dataset_numeric_summary.csv": {
+      "sha256": "e4014cf04d5147308ef4b72684b654d022741d7287f6577d7561c95402695777",
+      "bytes": 431
+    },
+    "descriptive_outer_fold_performance.csv": {
+      "sha256": "872a79bd6e33a726b1c53a312904e726def85fd2b4130780bac3a71478c8b192",
+      "bytes": 6252
+    },
+    "estimand_alignment_summary.csv": {
+      "sha256": "53074f34466bf5b29c078740471e230e5686b10040a8762574fe3749d31ee1af",
+      "bytes": 6039
+    },
+    "feature_selection_frequencies.csv": {
+      "sha256": "9387923ef3a84cb7ad20f2db072b71dde245441dd178350d9014f7c61199fcba",
+      "bytes": 3460
+    },
+    "fitness_errors.csv": {
+      "sha256": "dfc50d251f961760f047f99eb4573c2b33a8bb6f8fecbe9c2e20a1ab876a4e76",
+      "bytes": 48
+    },
+    "fold_metrics.csv": {
+      "sha256": "e7f053f6780f9b6387ee4d28ebb4baaf070f1551dc3f8d2b0c44b89138cf4c4c",
+      "bytes": 34182
+    },
+    "ga_pso_overlap.csv": {
+      "sha256": "b5afac95ad57840ffeb851c5377173fad8b20a6416d8f8d06077120bf404b364",
+      "bytes": 1141
+    },
+    "Heart_Disease_GA_PSO_Analysis_Workflow_v3_Monitored-IR.ipynb": {
+      "sha256": "69516c91adcf7af7a9b94ebff6ac4e958d6339b4b0e0fed550533cb405232e04",
+      "bytes": 2088415
+    },
+    "integrity_audit.csv": {
+      "sha256": "a476010c51152863c9d8158c8e97d655715a05f092081e9699f5cedbb8db118e",
+      "bytes": 1865
+    },
+    "method_to_code_audit.csv": {
+      "sha256": "1e4212bb277564cc4247f56e9c328e140aa3ce4659412de9fefa44dd0cd1550a",
+      "bytes": 486
+    },
+    "model_tuning_grids.csv": {
+      "sha256": "0ca7675b9e527208698f76bf3270c9a00b643723b2f1036316122aaa4de32368",
+      "bytes": 428
+    },
+    "optimiser_efficiency.csv": {
+      "sha256": "44ade09936d519b8a363a937afe034a7fd2414b2e7204ee2e282e90f32eec861",
+      "bytes": 29093
+    },
+    "outer_fold_roc_auc_contrast_summary.csv": {
+      "sha256": "789158788d50b197953e9b79743f4eda36106efce3942a1bf42bb88e19b32e0e",
+      "bytes": 4247
+    },
+    "outer_split_metadata.csv": {
+      "sha256": "dea12a7aaf889569daf37ebf9778d8b5a2093682c7dc1f69f7daa1f2e7383760",
+      "bytes": 459
+    },
+    "paired_bootstrap_differences.csv": {
+      "sha256": "2699a9bb4c6bdfce0de810860cd458f5187a90fb58063df3869dda86159845ec",
+      "bytes": 15412
+    },
+    "paired_outer_fold_roc_auc_differences.csv": {
+      "sha256": "2f941c6700ddb31b1c66ae10d3bc808ebcda2644cf27515a38a00473c389dc89",
+      "bytes": 15395
+    },
+    "run_authorisation_record.json": {
+      "sha256": "e9196c3ab6540c9eff792ac465b6525f11881c3e1522ed05dbf134959186837e",
+      "bytes": 435
+    },
+    "run_manifest.json": {
+      "sha256": "825379f698120a35ed42dc58ba7eb452da23bb61a833a7997a18584a4d161d4d",
+      "bytes": 27150
+    },
+    "run_manifest.sha256": {
+      "sha256": "3d7a0b0da4f6d5326f5398a25f716beda2c6e5429ba164bd76bf75be9b7f0503",
+      "bytes": 85
+    },
+    "selected_feature_counts.csv": {
+      "sha256": "e0df1f9dcfb771036b5b2007a658da1ae02cac37b359a74c98341dba2ea7e294",
+      "bytes": 580
+    },
+    "selected_masks.json": {
+      "sha256": "986c7126dd4d4f970134a4596c20c246f832d073e4edfaf67821f2a20db0da67",
+      "bytes": 64168
+    },
+    "software_versions.json": {
+      "sha256": "7792686f215f4035bb74d3c49ccf7d25fff954029d6f0c67529f0967ef359b16",
+      "bytes": 304
+    },
+    "stability_jaccard_nogueira.csv": {
+      "sha256": "7bb0933196005947bb5565d3ed710c9f14922daa3c0c6b299567e9628a8c3ff0",
+      "bytes": 1025
+    },
+    "tuning_results.json": {
+      "sha256": "6545820b6f2b5c91b95cff8e74388c5da44b2ee43243ef2a6602be60cf72489a",
+      "bytes": 51146
+    },
+    "V3_Deterministic_Precision_Supplement.csv": {
+      "sha256": "c942a3a7eb48f63e1019f3c31bbda32a9c9258be79d98998acf6678346113f00",
+      "bytes": 3009
+    },
+    "warning_error_log.json": {
+      "sha256": "e2b1be27a17c2694a18f8a7b6a52fa6ddd953cd8fa3cacd20644d3aa9b3f5061",
+      "bytes": 111
+    }
+  }
+}

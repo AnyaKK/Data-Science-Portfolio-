@@ -1,0 +1,16 @@
+classifier,condition,precision,calculation_type,source_sha256,audit_result_id
+DT,ALL,0.8125,deterministic recomputation from v3 aggregated probabilities; threshold >= 0.50,45ee356f4b7ea5a9efc526456e2454d03d11fb2df89e9e45995c981c6fee0770,AUD-V3-PRECISION-DT-ALL
+DT,GA,0.8512396694214877,deterministic recomputation from v3 aggregated probabilities; threshold >= 0.50,45ee356f4b7ea5a9efc526456e2454d03d11fb2df89e9e45995c981c6fee0770,AUD-V3-PRECISION-DT-GA
+DT,PSO,0.8244274809160306,deterministic recomputation from v3 aggregated probabilities; threshold >= 0.50,45ee356f4b7ea5a9efc526456e2454d03d11fb2df89e9e45995c981c6fee0770,AUD-V3-PRECISION-DT-PSO
+LR,ALL,0.8740157480314961,deterministic recomputation from v3 aggregated probabilities; threshold >= 0.50,45ee356f4b7ea5a9efc526456e2454d03d11fb2df89e9e45995c981c6fee0770,AUD-V3-PRECISION-LR-ALL
+LR,GA,0.8384615384615385,deterministic recomputation from v3 aggregated probabilities; threshold >= 0.50,45ee356f4b7ea5a9efc526456e2454d03d11fb2df89e9e45995c981c6fee0770,AUD-V3-PRECISION-LR-GA
+LR,PSO,0.8283582089552238,deterministic recomputation from v3 aggregated probabilities; threshold >= 0.50,45ee356f4b7ea5a9efc526456e2454d03d11fb2df89e9e45995c981c6fee0770,AUD-V3-PRECISION-LR-PSO
+RF,ALL,0.8134328358208955,deterministic recomputation from v3 aggregated probabilities; threshold >= 0.50,45ee356f4b7ea5a9efc526456e2454d03d11fb2df89e9e45995c981c6fee0770,AUD-V3-PRECISION-RF-ALL
+RF,GA,0.8244274809160306,deterministic recomputation from v3 aggregated probabilities; threshold >= 0.50,45ee356f4b7ea5a9efc526456e2454d03d11fb2df89e9e45995c981c6fee0770,AUD-V3-PRECISION-RF-GA
+RF,PSO,0.8283582089552238,deterministic recomputation from v3 aggregated probabilities; threshold >= 0.50,45ee356f4b7ea5a9efc526456e2454d03d11fb2df89e9e45995c981c6fee0770,AUD-V3-PRECISION-RF-PSO
+SVM,ALL,0.8115942028985508,deterministic recomputation from v3 aggregated probabilities; threshold >= 0.50,45ee356f4b7ea5a9efc526456e2454d03d11fb2df89e9e45995c981c6fee0770,AUD-V3-PRECISION-SVM-ALL
+SVM,GA,0.8308823529411765,deterministic recomputation from v3 aggregated probabilities; threshold >= 0.50,45ee356f4b7ea5a9efc526456e2454d03d11fb2df89e9e45995c981c6fee0770,AUD-V3-PRECISION-SVM-GA
+SVM,PSO,0.8308823529411765,deterministic recomputation from v3 aggregated probabilities; threshold >= 0.50,45ee356f4b7ea5a9efc526456e2454d03d11fb2df89e9e45995c981c6fee0770,AUD-V3-PRECISION-SVM-PSO
+XGB,ALL,0.8062015503875969,deterministic recomputation from v3 aggregated probabilities; threshold >= 0.50,45ee356f4b7ea5a9efc526456e2454d03d11fb2df89e9e45995c981c6fee0770,AUD-V3-PRECISION-XGB-ALL
+XGB,GA,0.8267716535433071,deterministic recomputation from v3 aggregated probabilities; threshold >= 0.50,45ee356f4b7ea5a9efc526456e2454d03d11fb2df89e9e45995c981c6fee0770,AUD-V3-PRECISION-XGB-GA
+XGB,PSO,0.8267716535433071,deterministic recomputation from v3 aggregated probabilities; threshold >= 0.50,45ee356f4b7ea5a9efc526456e2454d03d11fb2df89e9e45995c981c6fee0770,AUD-V3-PRECISION-XGB-PSO

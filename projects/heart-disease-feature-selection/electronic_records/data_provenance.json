@@ -1,0 +1,60 @@
+{
+  "analytical_shape": [
+    303,
+    13
+  ],
+  "binary_target_counts": {
+    "0": 164,
+    "1": 139
+  },
+  "categorical_predictors": [
+    "sex",
+    "cp",
+    "fbs",
+    "restecg",
+    "exang",
+    "slope",
+    "ca",
+    "thal"
+  ],
+  "duplicate_rows_retained": 0,
+  "local_filename": "data\\processed.cleveland.data",
+  "numeric_predictors": [
+    "age",
+    "trestbps",
+    "chol",
+    "thalach",
+    "oldpeak"
+  ],
+  "origin_used": "verified local copy supplied with notebook",
+  "original_target_counts": {
+    "0": 164,
+    "1": 55,
+    "2": 36,
+    "3": 35,
+    "4": 13
+  },
+  "predictors": [
+    "age",
+    "sex",
+    "cp",
+    "trestbps",
+    "chol",
+    "fbs",
+    "restecg",
+    "thalach",
+    "exang",
+    "oldpeak",
+    "slope",
+    "ca",
+    "thal"
+  ],
+  "raw_shape": [
+    303,
+    14
+  ],
+  "retrieved_or_verified_utc": "2026-10-21T08:38:42.005812+00:00",
+  "sha256": "a74b7efa387bc9d108d7d0115d831fe9b414b29ae7124f331b622b4efa0427c8",
+  "source_url": "https://archive.ics.uci.edu/static/public/45/heart+disease.zip",
+  "target_rule": "0=no heart disease; original values 1-4=heart disease"
+}

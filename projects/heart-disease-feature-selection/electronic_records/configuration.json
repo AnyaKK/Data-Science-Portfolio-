@@ -1,0 +1,30 @@
+{
+  "allow_final_run": true,
+  "bootstrap_replicates": 2000,
+  "checkpoint_dir": "workflow_outputs/checkpoints",
+  "decision_threshold": 0.5,
+  "expected_sha256": "a74b7efa387bc9d108d7d0115d831fe9b414b29ae7124f331b622b4efa0427c8",
+  "fast_mode": false,
+  "fitness_eval_budget": 160,
+  "fitness_tolerance": 1e-06,
+  "ga_population": 16,
+  "inner_folds": 3,
+  "local_data_file": "data/processed.cleveland.data",
+  "monitoring_interval_seconds": 5.0,
+  "monitoring_version": "1.0.0",
+  "n_jobs_outer": 1,
+  "optimiser_seeds": [
+    101,
+    202,
+    303
+  ],
+  "outer_folds": 5,
+  "outer_repeats": 2,
+  "output_root": "workflow_outputs",
+  "pso_particles": 16,
+  "random_state": 20260817,
+  "source_member": "processed.cleveland.data",
+  "source_url": "https://archive.ics.uci.edu/static/public/45/heart+disease.zip",
+  "windows_perfmon_enabled": true,
+  "workflow_version": "2.2.0-monitoring-estimands"
+}

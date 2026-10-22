@@ -1,0 +1,36 @@
+check,status,critical,note
+Fold contrast rows,PASS,True,
+Approved hypothesis contrasts,PASS,True,
+Separate estimand alignment rows,PASS,True,
+No bootstrap intervals assigned to fold-mean summaries,PASS,True,
+Exactly five classifiers,PASS,True,
+Exactly three conditions,PASS,True,
+Expected outer splits completed,PASS,True,
+Matched outer-test indices,PASS,True,
+No duplicate prediction keys,PASS,True,
+All masks have 13 original-feature bits,PASS,True,
+Every retained optimiser mask is non-empty,PASS,True,
+GA/PSO respect common unique-request cap,PASS,True,The cap does not equalise attempted calls or model fits
+Finite probabilities,PASS,True,
+"Probabilities in [0, 1]",PASS,True,
+Aggregated prediction keys unique,PASS,True,
+Each aggregate uses the mode-specific prediction count,PASS,True,Expected 2 prediction(s) per observation-condition; complete repeated outer validation
+Paired comparison rows aligned,PASS,True,
+Classifier-specific selector recorded,PASS,True,
+Selection and tuning restricted by function interfaces,PASS,True,Recorded design assertion using frozen inner indices; no independent code audit
+SVM calibration restricted by fitting function,PASS,True,Recorded outer-training hash; no independent code audit
+Cache context excludes optimiser seed,PASS,True,
+FAST output not labelled final,PASS,True,
+Final execution mode,PASS,False,fast_mode=false and final execution explicitly authorised
+Analytical observations,PASS,True,
+Fold metric rows,PASS,True,
+Raw prediction rows,PASS,True,
+Aggregated prediction rows,PASS,True,
+Optimiser runs,PASS,True,
+Selected mask rows,PASS,True,
+Tuning rows,PASS,True,
+Paired bootstrap rows,PASS,True,
+Stability rows,PASS,True,
+Thirty retained runs per stability row,PASS,True,
+All bootstrap rows have 2000 valid replicates,PASS,True,
+No skipped bootstrap replicates,PASS,True,

@@ -1,0 +1,9 @@
+{
+  "bootstrap_scope": "conditional on realised aggregated OOF predictions; not an interval for the fold-mean hypothesis estimand",
+  "chapter_correction_rule": "Register new deterministic summaries separately; correct Chapter 4 through a traceable amendment, never silently through Discussion.",
+  "configuration_fingerprint": "c2c87bcc95ecdf7f",
+  "hypothesis_estimand": "equal-weight mean of matched outer-fold ROC-AUC differences",
+  "hypothesis_inference": "descriptive direction only; no new test or interval",
+  "secondary_estimand": "difference of ROC-AUCs calculated from averaged OOF probabilities",
+  "smoke_mode": false
+}

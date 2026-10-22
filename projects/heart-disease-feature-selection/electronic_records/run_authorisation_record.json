@@ -1,0 +1,9 @@
+{
+  "configuration_fingerprint": "c2c87bcc95ecdf7f",
+  "historical_run_freeze_verified": false,
+  "meaning": "Operator acknowledgement for this new run, not independent proof about prior result inspection.",
+  "mode": "final",
+  "operator_budget_freeze_acknowledgement": true,
+  "recorded_utc": "2026-10-21T08:38:41.950306+00:00",
+  "source_notebook_sha256": "b2ce58ade83487fd0e5a361495ecc73f380497d81196813a33a09908abbbb129"
+}

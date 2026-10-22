@@ -1,0 +1,5 @@
+method,function_or_stage,fitting_data,independent_review
+Fold-local preprocessing,build_pipeline/evaluate_mask/tune_and_evaluate,inner training or complete outer training,False
+Classifier-specific feature selection,run_ga/run_binary_pso,outer training with frozen inner folds,False
+Condition-specific tuning,GridSearchCV in tune_and_evaluate,outer training with frozen inner folds,False
+SVM sigmoid calibration,CalibratedClassifierCV in tune_and_evaluate,outer training only,False

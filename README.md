@@ -6,7 +6,7 @@ This public portfolio brings together 12 documented project folders, 66 R/Python
 
 Many notebooks began as IBM Skills Network or Coursera labs and peer-graded assignments. Their original attribution and course material remain in the notebooks. The summaries below describe the work that is present in this repository; they do not claim results beyond the saved files.
 
-The public repository is a curated, privacy-aware selection from a larger local study archive. Raw private data, account details, institution-facing records, third-party course packs and duplicate checkpoints remain outside version control.
+The public repository is a curated, privacy-aware selection from a larger local study archive. Raw private data, account details, other institution-facing records, third-party course packs and duplicate checkpoints remain outside version control.
 
 ## Projects
 
@@ -24,6 +24,20 @@ The public repository is a curated, privacy-aware selection from a larger local 
 | [Loan-repayment classification assessment](projects/loan-classification-assessment/) | KNN, decision-tree, SVM and logistic-regression comparison with classification metrics | Python, pandas, scikit-learn |
 | [Spatial digital-infrastructure analysis](projects/spatial-infrastructure-r/) | Audited local-authority joins, spatial mapping, OLS diagnostics and decision-support outputs | R, Quarto, sf, tidyverse |
 | [Urban climate-plan QCA reanalysis](projects/aer-qca-reanalysis/) | Reproducible crisp-set QCA reconstruction, key and join audits, complete truth-table minimisation, necessity/sufficiency assessment and sensitivity analysis | R, Quarto, QCA |
+
+## Dissertation abstract
+
+The heart-disease feature-selection project includes an executed reviewed notebook and supporting records for grading. Personal details in that exact notebook were preserved at the author's request; the rest of the portfolio retains its existing privacy-aware curation.
+
+Feature selection may reduce predictor sets without improving prediction. This study compared genetic algorithm (GA) and particle swarm optimisation (PSO) feature selection against all-feature models for heart-disease classification using the processed Cleveland dataset.
+
+The analysis included 303 observations and 13 predictors. Logistic regression, decision tree, random forest, support vector machine and extreme gradient boosting were evaluated using five-fold stratified outer validation repeated twice. Training-local preprocessing, classifier-specific selection and condition-specific tuning produced 15 conditions. Area under the receiver operating characteristic curve (ROC-AUC) was primary; complementary metrics, calibration, parsimony, stability and computation were examined. Paired fold-mean differences were distinguished from differences calculated using averaged repeated out-of-fold probabilities. Bootstrap intervals conditioned on realised predictions without repeating model development.
+
+All-feature logistic regression achieved aggregated ROC-AUC .914, Matthews correlation coefficient .708, sensitivity .799 and specificity .902. Only decision-tree PSO minus all-feature performance had a positive paired fold-mean ROC-AUC difference (+0.0044). Its aggregated-prediction difference was +0.0100, with conditional 95% bootstrap confidence interval [−0.0166, 0.0363]. All aggregated ROC-AUC contrast intervals spanned zero. Mean selected-feature counts ranged from 5.00 to 8.80 for GA and 6.20 to 8.40 for PSO. Selection stability varied, and calibration remained secondary. PSO recorded shorter mean runtimes, qualified by shared-cache execution order.
+
+Neither selector consistently improved discrimination across classifiers. Smaller subsets did not establish clinical benefit. The historical sample, dependent folds, reused inner partitions and conditional uncertainty limited interpretation. The findings supported classifier-specific internal comparisons; contemporary independent evaluation was needed before broader application.
+
+See the [project guide and evidence structure](projects/heart-disease-feature-selection/README.md) and [grading notebook](projects/heart-disease-feature-selection/electronic_records/Heart_Disease_GA_PSO_Analysis_Workflow_v3_Monitored-IR.ipynb).
 
 ## Learning exercises
 
